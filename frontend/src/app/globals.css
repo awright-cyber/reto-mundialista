@@ -1,0 +1,35 @@
+:root {
+  --gold: #F5C518;
+  --gold2: #E8A800;
+  --red: #E63946;
+  --dark: #0A0E1A;
+  --dark2: #111827;
+  --dark3: #1C2333;
+  --card: #1E2535;
+  --card2: #242B3D;
+  --text: #F0F4FF;
+  --muted: #8899BB;
+  --green: #22C55E;
+  --blue: #3B82F6;
+  --orange: #F97316;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background: var(--dark);
+  color: var(--text);
+  font-family: var(--font-body, sans-serif);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a { color: inherit; }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(245,197,24,0.3); border-radius: 2px; }
