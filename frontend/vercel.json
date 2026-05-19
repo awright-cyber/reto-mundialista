@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-results",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/daily-ranking",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/check-achievements",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}

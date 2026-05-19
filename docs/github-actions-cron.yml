@@ -1,0 +1,73 @@
+# ============================================================
+# GitHub Actions — Sync automático de resultados del Mundial
+# Alternativa GRATUITA a Vercel Cron Pro
+# Archivo: .github/workflows/sync-results.yml
+# ============================================================
+name: Sincronizar Resultados Mundial
+
+on:
+  schedule:
+    # Cada 5 minutos (GitHub Actions mínimo = 5 min)
+    - cron: '*/5 * * * *'
+  # También permitir ejecución manual desde GitHub
+  workflow_dispatch:
+
+jobs:
+  sync-live-results:
+    name: Sync en vivo
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Llamar endpoint de sincronización
+        run: |
+          response=$(curl -s -w "\n%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://reto.plazalasamericas.ec/api/cron/sync-results")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+          
+          echo "Status: $http_code"
+          echo "Response: $body"
+          
+          if [ "$http_code" != "200" ]; then
+            echo "❌ Error en sync: $http_code"
+            exit 1
+          fi
+          
+          echo "✅ Sync completado"
+
+---
+# ============================================================
+# GitHub Actions — Ranking diario
+# Archivo: .github/workflows/daily-ranking.yml
+# ============================================================
+name: Ranking Diario
+
+on:
+  schedule:
+    # 23:59 hora Ecuador (UTC-5) = 04:59 UTC del día siguiente
+    - cron: '59 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  daily-ranking:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recalcular ranking diario
+        run: |
+          curl -s -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://reto.plazalasamericas.ec/api/cron/daily-ranking"
+          echo "✅ Ranking diario calculado"
+
+---
+# ============================================================
+# CONFIGURAR SECRETS EN GITHUB:
+# Tu repo → Settings → Secrets and variables → Actions → New secret
+#
+# Agregar:
+# - CRON_SECRET: (el mismo valor que en Vercel env vars)
+# ============================================================

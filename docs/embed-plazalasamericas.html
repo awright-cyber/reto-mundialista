@@ -1,0 +1,190 @@
+<!-- ============================================================
+  SCRIPT DE INTEGRACIÓN — Reto Mundialista
+  Para incluir en: www.plazalasamericas.ec
+  
+  OPCIÓN 1: WIDGET EMBEBIDO (recomendado)
+  Muestra el reto dentro de la web de Plaza como sección nativa.
+  ============================================================ -->
+
+<!-- En el <head> de la página de Plaza -->
+<link rel="preconnect" href="https://reto.plazalasamericas.ec">
+
+<!-- Donde quieras que aparezca el reto en la página -->
+<div id="reto-mundialista-widget"></div>
+
+<script>
+(function() {
+  // Configuración del widget
+  window.RetoMundialistaConfig = {
+    containerId: 'reto-mundialista-widget',
+    baseUrl: 'https://reto.plazalasamericas.ec',
+    theme: 'plaza',      // 'plaza' | 'dark' | 'light'
+    height: '800px',     // altura del iframe
+    mobileFullscreen: true
+  };
+
+  // Cargar el widget
+  var script = document.createElement('script');
+  script.src = 'https://reto.plazalasamericas.ec/embed.js';
+  script.async = true;
+  script.onload = function() {
+    RetoMundialista.init(window.RetoMundialistaConfig);
+  };
+  document.head.appendChild(script);
+})();
+</script>
+
+<!-- ============================================================
+  OPCIÓN 2: IFRAME SIMPLE (más rápido de implementar)
+  Si no quieres tocar el JavaScript de la web principal.
+  ============================================================ -->
+<iframe
+  src="https://reto.plazalasamericas.ec"
+  width="100%"
+  height="900px"
+  frameborder="0"
+  allow="clipboard-write"
+  title="Reto Mundialista Plaza Las Américas"
+  style="border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.15);"
+></iframe>
+
+<!-- ============================================================
+  OPCIÓN 3: LINK A SUBDOMINIO (más limpio, SEO independiente)
+  El reto vive en: reto.plazalasamericas.ec
+  Solo necesitas agregar un botón/banner en la web principal.
+  ============================================================ -->
+<a
+  href="https://reto.plazalasamericas.ec"
+  target="_blank"
+  rel="noopener"
+  style="
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #F5C518;
+    color: #0A0E1A;
+    font-family: 'Barlow Condensed', Impact, sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 14px 32px;
+    border-radius: 8px;
+    transition: transform .2s;
+  "
+  onmouseover="this.style.transform='translateY(-2px)'"
+  onmouseout="this.style.transform='translateY(0)'"
+>
+  ⚽ PARTICIPAR EN EL RETO MUNDIALISTA — GRATIS
+</a>
+
+<!-- ============================================================
+  BANNER HERO (para home de Plaza o email marketing)
+  ============================================================ -->
+<section style="
+  background: linear-gradient(135deg, #0A0E1A 0%, #1a1025 50%, #0d1a0a 100%);
+  padding: 48px 24px;
+  text-align: center;
+  font-family: sans-serif;
+">
+  <p style="
+    display: inline-block;
+    background: rgba(245,197,24,0.15);
+    border: 1px solid rgba(245,197,24,0.3);
+    border-radius: 20px;
+    padding: 4px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #F5C518;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  ">⚽ FIFA World Cup 2026 · Participación Gratuita</p>
+  
+  <h2 style="
+    font-family: 'Barlow Condensed', Impact, sans-serif;
+    font-weight: 900;
+    font-size: clamp(32px, 6vw, 56px);
+    color: white;
+    text-transform: uppercase;
+    line-height: 1;
+    margin: 0 0 12px;
+    letter-spacing: -1px;
+  ">RETO <span style="color: #F5C518">MUNDIALISTA</span></h2>
+  
+  <p style="color: #8899BB; font-size: 16px; max-width: 480px; margin: 0 auto 24px; line-height: 1.6;">
+    Predice todos los partidos del Mundial 2026, acumula puntos en tiempo real y gana premios exclusivos en Plaza Las Américas.
+  </p>
+  
+  <a href="https://reto.plazalasamericas.ec" style="
+    display: inline-block;
+    background: #F5C518;
+    color: #0A0E1A;
+    font-family: 'Barlow Condensed', Impact, sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 14px 36px;
+    border-radius: 8px;
+  ">🏆 Registrarme Gratis</a>
+  
+  <div style="
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  ">
+    <div style="text-align: center">
+      <div style="font-family: 'Barlow Condensed', Impact, sans-serif; font-weight: 800; font-size: 28px; color: #F5C518">104</div>
+      <div style="font-size: 11px; color: #8899BB; text-transform: uppercase; letter-spacing: .5px">Partidos</div>
+    </div>
+    <div style="text-align: center">
+      <div style="font-family: 'Barlow Condensed', Impact, sans-serif; font-weight: 800; font-size: 28px; color: #F5C518">$500</div>
+      <div style="font-size: 11px; color: #8899BB; text-transform: uppercase; letter-spacing: .5px">Premio</div>
+    </div>
+    <div style="text-align: center">
+      <div style="font-family: 'Barlow Condensed', Impact, sans-serif; font-weight: 800; font-size: 28px; color: #F5C518">100%</div>
+      <div style="font-size: 11px; color: #8899BB; text-transform: uppercase; letter-spacing: .5px">Gratuito</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+  QR CODE HTML (para imprimir en la plaza o activaciones)
+  Usar en flyers, banners, pantallas digitales
+  ============================================================ -->
+<div style="
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  max-width: 260px;
+  font-family: sans-serif;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+">
+  <!-- Generar QR en: https://qr.io con URL: https://reto.plazalasamericas.ec -->
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://reto.plazalasamericas.ec&color=0A0E1A&bgcolor=ffffff&margin=1"
+       alt="QR Reto Mundialista"
+       style="width: 180px; height: 180px; margin-bottom: 12px;" />
+  <div style="font-weight: 800; font-size: 16px; color: #0A0E1A; text-transform: uppercase; letter-spacing: 1px;">
+    RETO MUNDIALISTA
+  </div>
+  <div style="color: #666; font-size: 12px; margin-top: 4px;">
+    Escanea y participa gratis
+  </div>
+  <div style="
+    background: #F5C518;
+    color: #0A0E1A;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    margin-top: 8px;
+    display: inline-block;
+    letter-spacing: .5px;
+  ">Plaza Las Américas</div>
+</div>
