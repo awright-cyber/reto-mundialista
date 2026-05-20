@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 const PHASE_LABELS = {
-  grupos: 'Grupos', round_of_32: 'Round of 32', round_of_16: 'Octavos',
+  grupos: 'Grupos', round_of_32: 'Ronda de 32', round_of_16: 'Octavos',
   quarterfinals: 'Cuartos', semifinals: 'Semifinales',
   third_place: 'Tercer lugar', final: 'Final'
 };
@@ -18,6 +18,16 @@ const PHASE_COLORS = {
   semifinals: 'rgba(236,72,153,0.15)', third_place: 'rgba(34,197,94,0.15)',
   final: 'rgba(245,197,24,0.25)'
 };
+
+const FLAGS = {
+  MEX:'🇲🇽',RSA:'🇿🇦',KOR:'🇰🇷',CZE:'🇨🇿',CAN:'🇨🇦',BIH:'🇧🇦',QAT:'🇶🇦',SUI:'🇨🇭',
+  BRA:'🇧🇷',MAR:'🇲🇦',HAI:'🇭🇹',SCO:'🏴󠁧󠁢󠁳󠁣󠁴󠁿',USA:'🇺🇸',PAR:'🇵🇾',AUS:'🇦🇺',TUR:'🇹🇷',
+  GER:'🇩🇪',CUW:'🇨🇼',CIV:'🇨🇮',ECU:'🇪🇨',NED:'🇳🇱',JPN:'🇯🇵',SWE:'🇸🇪',TUN:'🇹🇳',
+  BEL:'🇧🇪',EGY:'🇪🇬',IRN:'🇮🇷',NZL:'🇳🇿',ESP:'🇪🇸',CPV:'🇨🇻',KSA:'🇸🇦',URU:'🇺🇾',
+  FRA:'🇫🇷',SEN:'🇸🇳',IRQ:'🇮🇶',NOR:'🇳🇴',ARG:'🇦🇷',ALG:'🇩🇿',AUT:'🇦🇹',JOR:'🇯🇴',
+  POR:'🇵🇹',COD:'🇨🇩',UZB:'🇺🇿',COL:'🇨🇴',ENG:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',CRO:'🇭🇷',GHA:'🇬🇭',PAN:'🇵🇦'
+};
+
 const PHASE_TEXT = {
   grupos: '#F5C518', round_of_32: '#93C5FD', round_of_16: '#FCA44A',
   quarterfinals: '#C084FC', semifinals: '#F472B6',
@@ -231,9 +241,9 @@ function PrediccionesPage({ user, showToast }) {
                 {m.group_name || PHASE_LABELS[m.phase]}
               </span>
               <div style={{ flex:1, display:'flex', alignItems:'center', gap:'6px', minWidth:'140px' }}>
-                <span style={{ fontFamily:'var(--font-head,sans-serif)', fontWeight:700, fontSize:'13px' }}>{m.team_a_flag||'🏳️'} {m.team_a}</span>
+                <span style={{ fontFamily:'var(--font-head,sans-serif)', fontWeight:700, fontSize:'13px' }}>{FLAGS[m.team_a_code]||m.team_a_flag||'🏳️'} {m.team_a}</span>
                 <span style={{ color:'var(--muted,#8899BB)', fontSize:'11px' }}>vs</span>
-                <span style={{ fontFamily:'var(--font-head,sans-serif)', fontWeight:700, fontSize:'13px' }}>{m.team_b_flag||'🏳️'} {m.team_b}</span>
+                <span style={{ fontFamily:'var(--font-head,sans-serif)', fontWeight:700, fontSize:'13px' }}>{FLAGS[m.team_b_code]||m.team_b_flag||'🏳️'} {m.team_b}</span>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:'5px' }}>
                 <input type="number" min="0" max="20" placeholder="0" value={scores[m.id+'_a']||''} onChange={e => setScores({...scores,[m.id+'_a']:e.target.value})}
