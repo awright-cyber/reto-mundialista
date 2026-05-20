@@ -19,14 +19,20 @@ const PHASE_COLORS = {
   final: 'rgba(245,197,24,0.25)'
 };
 
-const FLAGS = {
-  MEX:'🇲🇽',RSA:'🇿🇦',KOR:'🇰🇷',CZE:'🇨🇿',CAN:'🇨🇦',BIH:'🇧🇦',QAT:'🇶🇦',SUI:'🇨🇭',
-  BRA:'🇧🇷',MAR:'🇲🇦',HAI:'🇭🇹',SCO:'🏴󠁧󠁢󠁳󠁣󠁴󠁿',USA:'🇺🇸',PAR:'🇵🇾',AUS:'🇦🇺',TUR:'🇹🇷',
-  GER:'🇩🇪',CUW:'🇨🇼',CIV:'🇨🇮',ECU:'🇪🇨',NED:'🇳🇱',JPN:'🇯🇵',SWE:'🇸🇪',TUN:'🇹🇳',
-  BEL:'🇧🇪',EGY:'🇪🇬',IRN:'🇮🇷',NZL:'🇳🇿',ESP:'🇪🇸',CPV:'🇨🇻',KSA:'🇸🇦',URU:'🇺🇾',
-  FRA:'🇫🇷',SEN:'🇸🇳',IRQ:'🇮🇶',NOR:'🇳🇴',ARG:'🇦🇷',ALG:'🇩🇿',AUT:'🇦🇹',JOR:'🇯🇴',
-  POR:'🇵🇹',COD:'🇨🇩',UZB:'🇺🇿',COL:'🇨🇴',ENG:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',CRO:'🇭🇷',GHA:'🇬🇭',PAN:'🇵🇦'
+// Códigos ISO2 para banderas via flagcdn.com
+const FLAG_CODES = {
+  MEX:'mx',RSA:'za',KOR:'kr',CZE:'cz',CAN:'ca',BIH:'ba',QAT:'qa',SUI:'ch',
+  BRA:'br',MAR:'ma',HAI:'ht',SCO:'gb-sct',USA:'us',PAR:'py',AUS:'au',TUR:'tr',
+  GER:'de',CUW:'cw',CIV:'ci',ECU:'ec',NED:'nl',JPN:'jp',SWE:'se',TUN:'tn',
+  BEL:'be',EGY:'eg',IRN:'ir',NZL:'nz',ESP:'es',CPV:'cv',KSA:'sa',URU:'uy',
+  FRA:'fr',SEN:'sn',IRQ:'iq',NOR:'no',ARG:'ar',ALG:'dz',AUT:'at',JOR:'jo',
+  POR:'pt',COD:'cd',UZB:'uz',COL:'co',ENG:'gb-eng',CRO:'hr',GHA:'gh',PAN:'pa'
 };
+function FlagImg({code, name}) {
+  const iso = FLAG_CODES[code];
+  if (!iso) return <span style={{fontSize:'16px'}}>🏳️</span>;
+  return <img src={`https://flagcdn.com/24x18/${iso}.png`} alt={name} width="24" height="18" style={{borderRadius:'2px',objectFit:'cover',flexShrink:0}} />;
+}
 
 const PHASE_TEXT = {
   grupos: '#F5C518', round_of_32: '#93C5FD', round_of_16: '#FCA44A',
@@ -241,9 +247,9 @@ function PrediccionesPage({ user, showToast }) {
                 {m.group_name || PHASE_LABELS[m.phase]}
               </span>
               <div style={{ flex:1, display:'flex', alignItems:'center', gap:'6px', minWidth:'140px' }}>
-                <span style={{ fontFamily:'var(--font-head,sans-serif)', fontWeight:700, fontSize:'13px' }}>{FLAGS[m.team_a_code]||m.team_a_flag||'🏳️'} {m.team_a}</span>
+                <span style={{ fontFamily:'var(--font-head,sans-serif)', fontWeight:700, fontSize:'13px' }}><FlagImg code={m.team_a_code} name={m.team_a} /> {m.team_a}</span>
                 <span style={{ color:'var(--muted,#8899BB)', fontSize:'11px' }}>vs</span>
-                <span style={{ fontFamily:'var(--font-head,sans-serif)', fontWeight:700, fontSize:'13px' }}>{FLAGS[m.team_b_code]||m.team_b_flag||'🏳️'} {m.team_b}</span>
+                <span style={{ fontFamily:'var(--font-head,sans-serif)', fontWeight:700, fontSize:'13px' }}><FlagImg code={m.team_b_code} name={m.team_b} /> {m.team_b}</span>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:'5px' }}>
                 <input type="number" min="0" max="20" placeholder="0" value={scores[m.id+'_a']||''} onChange={e => setScores({...scores,[m.id+'_a']:e.target.value})}
@@ -253,8 +259,8 @@ function PrediccionesPage({ user, showToast }) {
                   style={{ width:'36px', height:'36px', background:'var(--dark3,#1C2333)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'6px', color:'var(--text)', fontWeight:700, fontSize:'16px', textAlign:'center' }} />
               </div>
               <div style={{ fontSize:'11px', color:'var(--muted,#8899BB)', textAlign:'right', minWidth:'65px' }}>
-                <div>{new Date(m.scheduled_at).toLocaleDateString('es-EC',{month:'short',day:'numeric'})}</div>
-                <div>{new Date(m.scheduled_at).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',timeZone:'America/Guayaquil'})}</div>
+                <div>{new Date(new Date(m.scheduled_at).getTime() - 0).toLocaleDateString('es-EC',{month:'short',day:'numeric',timeZone:'America/Guayaquil'})}</div>
+                <div>{new Date(m.scheduled_at).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',timeZone:'America/Guayaquil',hour12:true})}</div>
               </div>
             </div>
           ))}
