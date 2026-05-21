@@ -64,13 +64,24 @@ function useContent() {
           const obj={};
           data.forEach(r=>{obj[r.key]=r.value;});
           setContent(prev=>({...prev,...obj}));
-          // Aplicar colores dinámicos como variables CSS
+          // Aplicar colores dinámicos como variables CSS globales
           const root = document.documentElement;
-          data.forEach(r => {
-            if (r.key === 'color_primary') root.style.setProperty('--gold', r.value);
-            if (r.key === 'color_background') root.style.setProperty('--dark', r.value);
-            if (r.key === 'color_text') root.style.setProperty('--text', r.value);
-          });
+          const colorMap = obj;
+          if (colorMap.color_primary) {
+            root.style.setProperty('--gold', colorMap.color_primary);
+            root.style.setProperty('--gold2', colorMap.color_primary);
+            // También actualizar rgba para transparencias
+            const hex = colorMap.color_primary.replace('#','');
+            const r2 = parseInt(hex.substring(0,2),16);
+            const g2 = parseInt(hex.substring(2,4),16);
+            const b2 = parseInt(hex.substring(4,6),16);
+            root.style.setProperty('--gold-rgb', `${r2},${g2},${b2}`);
+          }
+          if (colorMap.color_background) {
+            root.style.setProperty('--dark', colorMap.color_background);
+            root.style.setProperty('--dark2', colorMap.color_background);
+          }
+          if (colorMap.color_text) root.style.setProperty('--text', colorMap.color_text);
         }
       });
   },[]);
@@ -92,7 +103,7 @@ export default function Home() {
 
   return (
     <div style={{minHeight:'100vh',background:'#0A0E1A',color:'#F0F4FF',fontFamily:'sans-serif'}}>
-      <Nav page={page} setPage={setPage} user={user} websiteLink={c('link_website')} />
+      <Nav page={page} setPage={setPage} user={user} c={c} />
       {toast && (
         <div style={{position:'fixed',top:'65px',right:'16px',zIndex:999,background:'#242B3D',border:`1px solid ${toast.color}`,borderRadius:'10px',padding:'12px 16px',fontSize:'13px',fontWeight:500,display:'flex',alignItems:'center',gap:'8px',boxShadow:'0 4px 20px rgba(0,0,0,0.4)',maxWidth:'280px'}}>
           <span style={{color:toast.color,fontSize:'18px'}}>✓</span><span>{toast.msg}</span>
@@ -101,20 +112,30 @@ export default function Home() {
       <style>{`
   :root {
     --gold: #F5C518;
+    --gold2: #E8A800;
+    --gold-rgb: 245,197,24;
     --dark: #0A0E1A;
+    --dark2: #111827;
+    --dark3: #1C2333;
     --text: #F0F4FF;
     --muted: #8899BB;
     --green: #22C55E;
     --blue: #3B82F6;
     --orange: #F97316;
     --card: #1E2535;
-    --dark3: #1C2333;
+    --red: #E63946;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--dark); color: var(--text); }
   input:focus { border-color: var(--gold) !important; outline: none; }
+  button:hover { opacity: 0.9; }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-thumb { background: rgba(245,197,24,0.3); border-radius: 2px; }
-  body { background: var(--dark); color: var(--text); }
+  ::-webkit-scrollbar-thumb { background: rgba(var(--gold-rgb),0.3); border-radius: 2px; }
+  .btn-primary { background: var(--gold) !important; }
+  .nav-logo-gold { color: var(--gold) !important; }
+  .stat-num { color: var(--gold) !important; }
+  .accent-gold { color: var(--gold) !important; }
+  .border-gold { border-color: rgba(var(--gold-rgb),0.3) !important; }
 `}</style>
       {page==='landing' && <LandingPage setPage={setPage} c={c} />}
       {page==='registro' && <RegistroPage setPage={setPage} setUser={setUser} showToast={showToast} c={c} />}
@@ -127,34 +148,59 @@ export default function Home() {
   );
 }
 
-function Nav({page,setPage,user,websiteLink}) {
+function Nav({page,setPage,user,c}) {
   const tabs=[{id:'landing',label:'Inicio'},{id:'predicciones',label:'Predicciones'},{id:'dashboard',label:'Mi Reto'},{id:'ranking',label:'Ranking'},{id:'promos',label:'Plaza'}];
+  const logoUrl = c('logo_url');
+  const websiteLink = c('link_website') || 'https://www.plazalasamericas.ec';
   return (
-    <nav style={{background:'rgba(10,14,26,0.97)',backdropFilter:'blur(12px)',padding:'0 16px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'56px',borderBottom:'1px solid rgba(245,197,24,0.15)',position:'sticky',top:0,zIndex:100}}>
-      <div style={{fontWeight:900,fontSize:'18px',color:'#F5C518',textTransform:'uppercase',letterSpacing:'1px',cursor:'pointer'}} onClick={()=>setPage('landing')}>
-        Reto <span style={{color:'#F0F4FF'}}>Mundial</span>
+    <nav style={{background:'rgba(10,14,26,0.97)',backdropFilter:'blur(12px)',padding:'0 12px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'56px',borderBottom:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',position:'sticky',top:0,zIndex:100}}>
+      <div style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer'}} onClick={()=>setPage('landing')}>
+        {logoUrl ? (
+          <img src={logoUrl} alt="Logo" style={{height:'32px',objectFit:'contain'}} />
+        ) : (
+          <span style={{fontWeight:900,fontSize:'18px',color:'var(--gold)',textTransform:'uppercase',letterSpacing:'1px'}}>
+            Reto <span style={{color:'var(--text)'}}>Mundial</span>
+          </span>
+        )}
       </div>
       <div style={{display:'flex',gap:'2px',overflowX:'auto'}}>
         {tabs.map(t=>(
-          <button key={t.id} onClick={()=>setPage(t.id)} style={{background:page===t.id?'rgba(245,197,24,0.12)':'none',border:'none',color:page===t.id?'#F5C518':'#8899BB',fontSize:'12px',fontWeight:500,padding:'6px 10px',borderRadius:'6px',cursor:'pointer',textTransform:'uppercase',letterSpacing:'.5px',whiteSpace:'nowrap'}}>{t.label}</button>
+          <button key={t.id} onClick={()=>setPage(t.id)} style={{background:page===t.id?'rgba(var(--gold-rgb,245,197,24),0.12)':'none',border:'none',color:page===t.id?'var(--gold)':'var(--muted,#8899BB)',fontSize:'12px',fontWeight:500,padding:'6px 10px',borderRadius:'6px',cursor:'pointer',textTransform:'uppercase',letterSpacing:'.5px',whiteSpace:'nowrap'}}>{t.label}</button>
         ))}
       </div>
-      <a href={websiteLink||'https://www.plazalasamericas.ec'} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:'5px',background:'rgba(245,197,24,0.1)',border:'1px solid rgba(245,197,24,0.2)',borderRadius:'6px',padding:'5px 10px',fontSize:'11px',fontWeight:600,color:'#F5C518',textDecoration:'none',whiteSpace:'nowrap'}}>
-        🏬 plazalasamericas.ec
+      <a href={websiteLink} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:'5px',background:'rgba(var(--gold-rgb,245,197,24),0.1)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',borderRadius:'6px',padding:'5px 10px',fontSize:'11px',fontWeight:600,color:'var(--gold)',textDecoration:'none',whiteSpace:'nowrap'}}>
+        🏬 Plaza
       </a>
     </nav>
   );
 }
 
 function Footer({c}) {
+  const logoUrl = c('logo_url');
+  const links = [
+    {url: c('link_website'), label: '🏬 Plaza Las Américas', bold: true},
+    {url: c('link_instagram'), label: '📸 Instagram'},
+    {url: c('link_whatsapp'), label: '💬 WhatsApp'},
+    {url: c('link_terms'), label: '📄 Términos y Condiciones'},
+  ].filter(l => l.url && l.url !== '#' && l.url.trim() !== '');
+
   return (
-    <footer style={{background:'rgba(10,14,26,0.97)',borderTop:'1px solid rgba(255,255,255,0.06)',padding:'20px',marginTop:'40px',textAlign:'center'}}>
-      <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:'16px',flexWrap:'wrap',marginBottom:'10px'}}>
-        <a href={c('link_website')||'https://www.plazalasamericas.ec'} target="_blank" rel="noopener" style={{color:'#F5C518',textDecoration:'none',fontSize:'13px',fontWeight:600}}>🏬 Plaza Las Américas</a>
-        <a href={c('link_instagram')||'#'} target="_blank" rel="noopener" style={{color:'#8899BB',textDecoration:'none',fontSize:'13px'}}>📸 Instagram</a>
-        <a href={c('link_whatsapp')||'#'} target="_blank" rel="noopener" style={{color:'#8899BB',textDecoration:'none',fontSize:'13px'}}>💬 WhatsApp</a>
-        <a href={c('link_terms')||'#'} target="_blank" rel="noopener" style={{color:'#8899BB',textDecoration:'none',fontSize:'13px'}}>📄 Términos y Condiciones</a>
-      </div>
+    <footer style={{background:'rgba(10,14,26,0.97)',borderTop:'1px solid rgba(255,255,255,0.06)',padding:'24px 20px',marginTop:'40px',textAlign:'center'}}>
+      {logoUrl && (
+        <div style={{marginBottom:'16px'}}>
+          <img src={logoUrl} alt="Plaza Las Américas" style={{height:'40px',objectFit:'contain'}} />
+        </div>
+      )}
+      {links.length > 0 && (
+        <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:'16px',flexWrap:'wrap',marginBottom:'12px'}}>
+          {links.map(l=>(
+            <a key={l.label} href={l.url} target="_blank" rel="noopener"
+              style={{color: l.bold ? 'var(--gold)' : '#8899BB',textDecoration:'none',fontSize:'13px',fontWeight: l.bold ? 600 : 400}}>
+              {l.label}
+            </a>
+          ))}
+        </div>
+      )}
       <p style={{fontSize:'11px',color:'#8899BB'}}>© 2026 Reto Mundialista · Plaza Las Américas · Participación 100% gratuita</p>
     </footer>
   );
@@ -167,7 +213,7 @@ function LandingPage({setPage,c}) {
         <div style={{display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(var(--gold-rgb,245,197,24),0.15)',border:'1px solid rgba(245,197,24,0.3)',borderRadius:'20px',padding:'4px 14px',fontSize:'11px',fontWeight:600,color:'var(--gold)',letterSpacing:'1px',textTransform:'uppercase',marginBottom:'20px'}}>{c('landing_badge')}</div>
         <h1 style={{fontWeight:900,fontSize:'clamp(40px,8vw,68px)',lineHeight:.95,letterSpacing:'-1px',textTransform:'uppercase',marginBottom:'12px'}}>
           {c('landing_title')}<br/>
-          <span style={{color:'#F5C518'}}>{c('landing_subtitle')}</span><br/>
+          <span style={{color:'var(--gold)'}}>{c('landing_subtitle')}</span><br/>
           <span style={{fontSize:'clamp(18px,4vw,28px)',fontWeight:600,color:'#8899BB',letterSpacing:'2px'}}>{c('landing_tagline')}</span>
         </h1>
         <p style={{fontSize:'15px',color:'#8899BB',maxWidth:'480px',margin:'0 auto 32px',lineHeight:1.6}}>{c('landing_description')}</p>
@@ -185,7 +231,7 @@ function LandingPage({setPage,c}) {
         ))}
       </div>
       <div style={{padding:'32px 20px'}}>
-        <h2 style={{fontWeight:800,fontSize:'22px',letterSpacing:'1px',textTransform:'uppercase',marginBottom:'4px'}}>Sistema de <span style={{color:'#F5C518'}}>Puntos</span></h2>
+        <h2 style={{fontWeight:800,fontSize:'22px',letterSpacing:'1px',textTransform:'uppercase',marginBottom:'4px'}}>Sistema de <span style={{color:'var(--gold)'}}>Puntos</span></h2>
         <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'16px'}}>Máximo 5 puntos por partido</p>
         <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
           {[['⚡ Marcador exacto','5 pts','#F5C518'],['✅ Ganador o empate','3 pts','#3B82F6'],['📊 Diferencia de goles','2 pts','#F97316'],['🎯 Goles de un equipo','1 pt','#8899BB']].map(([label,pts,color])=>(
@@ -225,7 +271,7 @@ function RegistroPage({setPage,setUser,showToast,c}) {
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'600px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Registro <span style={{color:'#F5C518'}}>Gratuito</span></h2>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Registro <span style={{color:'var(--gold)'}}>Gratuito</span></h2>
       <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'20px'}}>Únete al Reto Mundialista Plaza Las Américas 2026</p>
       <div style={{background:'#1E2535',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'12px',padding:'20px'}}>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
@@ -285,7 +331,7 @@ function PrediccionesPage({user,showToast,c}) {
 
   return (
     <div style={{padding:'20px',maxWidth:'900px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Mis <span style={{color:'#F5C518'}}>Predicciones</span></h2>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Mis <span style={{color:'var(--gold)'}}>Predicciones</span></h2>
       <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'14px'}}>Ingresa el marcador que crees que tendrá cada partido</p>
       <div style={{display:'flex',gap:'6px',overflowX:'auto',paddingBottom:'4px',marginBottom:'16px'}}>
         {phases.map(p=>(
@@ -344,26 +390,26 @@ function DashboardPage({user}) {
   if (!user) return (
     <div style={{padding:'60px 20px',textAlign:'center'}}>
       <div style={{fontSize:'48px',marginBottom:'16px'}}>👤</div>
-      <h2 style={{fontWeight:800,fontSize:'24px',color:'#F5C518',marginBottom:'8px'}}>REGÍSTRATE PRIMERO</h2>
+      <h2 style={{fontWeight:800,fontSize:'24px',color:'var(--gold)',marginBottom:'8px'}}>REGÍSTRATE PRIMERO</h2>
       <p style={{color:'#8899BB'}}>Necesitas una cuenta para ver tu dashboard</p>
     </div>
   );
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'600px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}>Mi <span style={{color:'#F5C518'}}>Dashboard</span></h2>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}>Mi <span style={{color:'var(--gold)'}}>Dashboard</span></h2>
       <div style={{background:'#1C2333',border:'1px solid rgba(245,197,24,0.15)',borderRadius:'14px',padding:'20px',marginBottom:'16px'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
           <div>
             <div style={{fontSize:'12px',color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px'}}>Posición Global</div>
-            <div style={{fontWeight:900,fontSize:'42px',color:'#F5C518',lineHeight:1}}>#{stats?.global_rank||'—'}</div>
+            <div style={{fontWeight:900,fontSize:'42px',color:'var(--gold)',lineHeight:1}}>#{stats?.global_rank||'—'}</div>
           </div>
           <div style={{textAlign:'right'}}>
             <div style={{fontSize:'12px',color:'#8899BB'}}>Puntos</div>
             <div style={{fontWeight:900,fontSize:'52px',color:'#F0F4FF',lineHeight:1}}>{stats?.total_points||0}</div>
           </div>
         </div>
-        <div style={{marginTop:'12px',fontSize:'13px',color:'#8899BB'}}>Bienvenido, <strong style={{color:'#F5C518'}}>{user.full_name}</strong></div>
+        <div style={{marginTop:'12px',fontSize:'13px',color:'#8899BB'}}>Bienvenido, <strong style={{color:'var(--gold)'}}>{user.full_name}</strong></div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
         {[['Exactos','exact_scores','#F5C518'],['Acertados','correct_results','#22C55E'],['Predicciones','total_predictions','#3B82F6'],['% Aciertos','accuracy_pct','#F97316']].map(([l,k,col])=>(
@@ -386,7 +432,7 @@ function RankingPage() {
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'700px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}>Ranking <span style={{color:'#F5C518'}}>Global</span></h2>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}>Ranking <span style={{color:'var(--gold)'}}>Global</span></h2>
       {loading?<div style={{textAlign:'center',padding:'40px',color:'#8899BB'}}>Cargando ranking...</div>:(
         <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
           {ranking.length===0&&<div style={{textAlign:'center',padding:'40px',color:'#8899BB'}}>El ranking se activará cuando comiencen los partidos</div>}
@@ -400,7 +446,7 @@ function RankingPage() {
               <span style={{fontSize:'11px',fontWeight:600,color:r.rank_change>0?'#22C55E':r.rank_change<0?'#E63946':'#8899BB'}}>
                 {r.rank_change>0?`▲${r.rank_change}`:r.rank_change<0?`▼${Math.abs(r.rank_change)}`:'—'}
               </span>
-              <span style={{fontWeight:700,fontSize:'18px',color:'#F5C518'}}>{r.total_points}</span>
+              <span style={{fontWeight:700,fontSize:'18px',color:'var(--gold)'}}>{r.total_points}</span>
             </div>
           ))}
         </div>
@@ -420,10 +466,10 @@ function PromosPage({c}) {
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'900px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Plaza Las <span style={{color:'#F5C518'}}>Américas</span></h2>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Plaza Las <span style={{color:'var(--gold)'}}>Américas</span></h2>
       <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'16px'}}>Promociones mundialistas exclusivas para participantes</p>
       <div style={{background:'linear-gradient(135deg,rgba(245,197,24,0.08),rgba(249,115,22,0.05))',border:'1px solid rgba(245,197,24,0.2)',borderRadius:'12px',padding:'16px',marginBottom:'16px',textAlign:'center'}}>
-        <div style={{fontSize:'11px',color:'#F5C518',fontWeight:600,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>🎉 Evento especial</div>
+        <div style={{fontSize:'11px',color:'var(--gold)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>🎉 Evento especial</div>
         <div style={{fontWeight:800,fontSize:'18px',marginBottom:'4px'}}>{c('event_title')}</div>
         <div style={{fontSize:'12px',color:'#8899BB'}}>{c('event_description')}</div>
         <div style={{marginTop:'8px',display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(34,197,94,0.12)',borderRadius:'6px',padding:'4px 12px',fontSize:'12px',color:'#22C55E',fontWeight:600}}>{c('event_schedule')}</div>
@@ -440,7 +486,7 @@ function PromosPage({c}) {
                 <div style={{height:'80px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'36px',background:'rgba(255,255,255,0.03)'}}>{p.emoji||'🏆'}</div>
               )}
               <div style={{padding:'10px'}}>
-                <div style={{fontSize:'10px',color:'#F5C518',fontWeight:600,textTransform:'uppercase'}}>{p.store_name}</div>
+                <div style={{fontSize:'10px',color:'var(--gold)',fontWeight:600,textTransform:'uppercase'}}>{p.store_name}</div>
                 <div style={{fontSize:'13px',fontWeight:600,marginTop:'2px'}}>{p.title}</div>
                 <div style={{fontSize:'11px',color:'#8899BB',marginTop:'3px'}}>{p.description}</div>
               </div>
