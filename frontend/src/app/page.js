@@ -34,6 +34,44 @@ function FlagImg({code, name}) {
   return <img src={`https://flagcdn.com/24x18/${iso}.png`} alt={name} width="24" height="18" style={{borderRadius:'2px',objectFit:'cover',flexShrink:0}} />;
 }
 
+
+// ============================================================
+// HOOK: Cargar contenido editable desde Supabase
+// ============================================================
+const DEFAULT_CONTENT = {
+  landing_badge: c('landing_badge'),
+  landing_title: 'RETO',
+  landing_subtitle: c('landing_subtitle'),
+  landing_tagline: c('landing_tagline'),
+  landing_description: '{c('landing_description')}',
+  landing_btn_primary: '{c('landing_btn_primary')}',
+  landing_btn_secondary: '{c('landing_btn_secondary')}',
+  stat_matches: '104', stat_teams: '48', stat_free: '100%', stat_start: 'Jun 11',
+  stat_matches_label: 'Partidos', stat_teams_label: 'Selecciones', stat_free_label: 'Gratuito', stat_start_label: 'Inicio',
+  prize_amount: '$500', prize_description: 'Gift Card para el ganador del Reto Mundialista',
+  predictions_lock_notice: c('predictions_lock_notice'),
+  event_title: c('event_title'),
+  event_description: c('event_description'),
+  event_schedule: c('event_schedule'),
+  color_primary: '#F5C518', color_background: '#0A0E1A', color_text: '#F0F4FF',
+  link_terms: '#', link_instagram: '#', link_whatsapp: '#', link_website: 'https://www.plazalasamericas.ec',
+};
+
+function useContent() {
+  const [content, setContent] = useState(DEFAULT_CONTENT);
+  useEffect(() => {
+    supabase.from('app_content').select('key,value')
+      .then(({ data }) => {
+        if (data?.length) {
+          const obj = {};
+          data.forEach(r => { obj[r.key] = r.value; });
+          setContent(prev => ({ ...prev, ...obj }));
+        }
+      });
+  }, []);
+  return content;
+}
+
 const PHASE_TEXT = {
   grupos: '#F5C518', round_of_32: '#93C5FD', round_of_16: '#FCA44A',
   quarterfinals: '#C084FC', semifinals: '#F472B6',
@@ -44,6 +82,7 @@ export default function Home() {
   const [page, setPage] = useState('landing');
   const [user, setUser] = useState(null);
   const [toast, setToast] = useState(null);
+  const content = useContent();
 
   const showToast = (msg, color = 'var(--gold)') => {
     setToast({ msg, color });
@@ -66,12 +105,12 @@ export default function Home() {
         ::-webkit-scrollbar { width:4px; height:4px; }
         ::-webkit-scrollbar-thumb { background:rgba(245,197,24,0.3); border-radius:2px; }
       `}</style>
-      {page === 'landing'       && <LandingPage setPage={setPage} />}
+      {page === 'landing'       && <LandingPage setPage={setPage} content={content} />}
       {page === 'registro'      && <RegistroPage setPage={setPage} setUser={setUser} showToast={showToast} />}
-      {page === 'predicciones'  && <PrediccionesPage user={user} showToast={showToast} />}
+      {page === 'predicciones'  && <PrediccionesPage user={user} showToast={showToast} content={content} />}
       {page === 'dashboard'     && <DashboardPage user={user} />}
       {page === 'ranking'       && <RankingPage />}
-      {page === 'promos'        && <PromosPage />}
+      {page === 'promos'        && <PromosPage content={content} />}
     </div>
   );
 }
@@ -96,13 +135,14 @@ function Nav({ page, setPage, user }) {
   );
 }
 
-function LandingPage({ setPage }) {
+function LandingPage({ setPage, content = DEFAULT_CONTENT }) {
+  const c = (key) => content[key] || DEFAULT_CONTENT[key] || '';
   return (
     <div>
       <div style={{ background:'linear-gradient(160deg,#0A0E1A 0%,#1a1025 40%,#0d1a0a 100%)', padding:'48px 20px 64px', textAlign:'center' }}>
         <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(245,197,24,0.15)', border:'1px solid rgba(245,197,24,0.3)', borderRadius:'20px', padding:'4px 14px', fontSize:'11px', fontWeight:600, color:'var(--gold)', letterSpacing:'1px', textTransform:'uppercase', marginBottom:'20px' }}>⚽ FIFA World Cup 2026</div>
         <h1 style={{ fontFamily:'var(--font-head,sans-serif)', fontWeight:900, fontSize:'clamp(40px,8vw,68px)', lineHeight:.95, letterSpacing:'-1px', textTransform:'uppercase', marginBottom:'12px' }}>
-          RETO<br /><span style={{ color:'var(--gold)' }}>MUNDIALISTA</span><br />
+          {c('landing_title')}<br /><span style={{ color:'var(--gold)' }}>MUNDIALISTA</span><br />
           <span style={{ fontSize:'clamp(18px,4vw,28px)', fontWeight:600, color:'var(--muted,#8899BB)', letterSpacing:'2px' }}>Plaza Las Américas</span>
         </h1>
         <p style={{ fontSize:'15px', color:'var(--muted,#8899BB)', maxWidth:'480px', margin:'0 auto 32px', lineHeight:1.6 }}>Predice todos los partidos del Mundial 2026, acumula puntos en tiempo real y gana premios exclusivos de Plaza Las Américas.</p>
@@ -112,7 +152,7 @@ function LandingPage({ setPage }) {
         </div>
       </div>
       <div style={{ display:'flex', justifyContent:'center', gap:'32px', padding:'24px 20px', background:'rgba(255,255,255,0.02)', borderTop:'1px solid rgba(255,255,255,0.06)', flexWrap:'wrap' }}>
-        {[['104','Partidos'],['32','Selecciones'],['100%','Gratuito'],['Jun 11','Inicio']].map(([n,l]) => (
+        {[[c('stat_matches'),c('stat_matches_label')],[c('stat_teams'),c('stat_teams_label')],[c('stat_free'),c('stat_free_label')],[c('stat_start'),c('stat_start_label')]].map(([n,l]) => (
           <div key={l} style={{ textAlign:'center' }}>
             <div style={{ fontFamily:'var(--font-head,sans-serif)', fontWeight:800, fontSize:'28px', color:'var(--gold)', lineHeight:1 }}>{n}</div>
             <div style={{ fontSize:'11px', color:'var(--muted,#8899BB)', textTransform:'uppercase', letterSpacing:'.5px', marginTop:'2px' }}>{l}</div>
@@ -193,7 +233,8 @@ function RegistroPage({ setPage, setUser, showToast }) {
   );
 }
 
-function PrediccionesPage({ user, showToast }) {
+function PrediccionesPage({ user, showToast, content = DEFAULT_CONTENT }) {
+  const c = (key) => content[key] || DEFAULT_CONTENT[key] || '';
   const [matches, setMatches] = useState([]);
   const [scores, setScores] = useState({});
   const [phase, setPhase] = useState('grupos');
@@ -355,7 +396,8 @@ function RankingPage() {
   );
 }
 
-function PromosPage() {
+function PromosPage({ content = DEFAULT_CONTENT }) {
+  const c = (key) => content[key] || DEFAULT_CONTENT[key] || '';
   const promos = [
     { emoji:'🍔', store:'Food Court', nombre:'Combo Mundial', desc:'2x1 en combo burger durante los partidos' },
     { emoji:'👕', store:'Deportes', nombre:'20% OFF camisetas', desc:'Camisetas oficiales selecciones' },
