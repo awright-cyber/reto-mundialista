@@ -1,0 +1,30 @@
+# ============================================================
+# RENDER CRON JOB — Sincronización automática de resultados
+# Archivo: render.yaml (en la raíz del repositorio)
+# ============================================================
+services:
+  - type: web
+    name: reto-mundialista
+    env: node
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm start
+
+  - type: cron
+    name: sync-world-cup-results
+    env: node
+    schedule: "*/5 * * * *"  # Cada 5 minutos
+    buildCommand: cd frontend && npm install
+    startCommand: node -e "
+      const https = require('https');
+      const options = {
+        hostname: 'reto-mundialista.onrender.com',
+        path: '/api/cron/sync-results',
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + process.env.CRON_SECRET }
+      };
+      https.request(options, r => {
+        let d = '';
+        r.on('data', c => d += c);
+        r.on('end', () => console.log('Sync:', d));
+      }).on('error', e => console.error('Error:', e)).end();
+    "
