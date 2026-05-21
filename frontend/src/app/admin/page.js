@@ -18,7 +18,8 @@ const DEFAULT_CONTENT = {
   event_title:'ZONA MUNDIAL · Plaza Las Américas',event_description:'Pantallas gigantes · Activaciones · Sorteos en vivo',
   event_schedule:'📅 Todos los días del Mundial · 16h00 - 22h00',
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
-  link_terms:'#',link_instagram:'#',link_whatsapp:'#',link_website:'https://www.plazalasamericas.ec',
+  link_terms:'',link_instagram:'',link_whatsapp:'',link_website:'https://www.plazalasamericas.ec',
+  logo_url:'',
 };
 
 export default function AdminPage() {
@@ -164,11 +165,25 @@ export default function AdminPage() {
             <Sec title="⚠️ Avisos">
               <F label="Aviso cierre predicciones" val={s('predictions_lock_notice')} set={v=>set('predictions_lock_notice',v)} />
             </Sec>
-            <Sec title="🔗 Links">
+            <Sec title="🖼️ Logo de Plaza Las Américas">
+              <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'10px'}}>
+                Sube tu logo a <a href="https://imgur.com/upload" target="_blank" rel="noopener" style={{color:'var(--gold,#F5C518)'}}>imgur.com</a>, haz clic derecho en la imagen → "Copiar dirección de la imagen" y pégala aquí.
+              </p>
+              <F label="URL del logo (header y footer)" val={s('logo_url')} set={v=>set('logo_url',v)} />
+              {s('logo_url') && (
+                <div style={{marginTop:'8px',background:'#0A0E1A',padding:'10px',borderRadius:'6px',display:'inline-block'}}>
+                  <p style={{fontSize:'11px',color:'#8899BB',marginBottom:'6px'}}>Vista previa:</p>
+                  <img src={s('logo_url')} alt="Logo preview" style={{height:'40px',objectFit:'contain'}}
+                    onError={e=>{e.target.style.display='none';}} />
+                </div>
+              )}
+            </Sec>
+            <Sec title="🔗 Links (dejar vacío para ocultar)">
+              <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'10px'}}>Si dejas un campo vacío, ese link no aparecerá en la app.</p>
               <F label="Web principal Plaza" val={s('link_website')} set={v=>set('link_website',v)} />
-              <F label="Instagram" val={s('link_instagram')} set={v=>set('link_instagram',v)} />
-              <F label="WhatsApp / Contacto" val={s('link_whatsapp')} set={v=>set('link_whatsapp',v)} />
-              <F label="Términos y Condiciones" val={s('link_terms')} set={v=>set('link_terms',v)} />
+              <F label="Instagram (dejar vacío para ocultar)" val={s('link_instagram')} set={v=>set('link_instagram',v)} />
+              <F label="WhatsApp / Contacto (dejar vacío para ocultar)" val={s('link_whatsapp')} set={v=>set('link_whatsapp',v)} />
+              <F label="Términos y Condiciones (dejar vacío para ocultar)" val={s('link_terms')} set={v=>set('link_terms',v)} />
             </Sec>
             <Sec title="🎨 Colores de la app">
               <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>El color anaranjado de Plaza Las Américas es <strong style={{color:'#E8611A'}}>#E8611A</strong>. Haz clic en el cuadro de color o escribe el código hexadecimal.</p>
