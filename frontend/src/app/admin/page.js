@@ -170,6 +170,14 @@ export default function AdminPage() {
               <F label="WhatsApp / Contacto" val={s('link_whatsapp')} set={v=>set('link_whatsapp',v)} />
               <F label="Términos y Condiciones" val={s('link_terms')} set={v=>set('link_terms',v)} />
             </Sec>
+            <Sec title="🎨 Colores de la app">
+              <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>El color anaranjado de Plaza Las Américas es <strong style={{color:'#E8611A'}}>#E8611A</strong>. Haz clic en el cuadro de color o escribe el código hexadecimal.</p>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'10px'}}>
+                <CF label="Color primario (dorado/anaranjado)" val={s('color_primary')} set={v=>set('color_primary',v)} />
+                <CF label="Color de fondo" val={s('color_background')} set={v=>set('color_background',v)} />
+                <CF label="Color de texto" val={s('color_text')} set={v=>set('color_text',v)} />
+              </div>
+            </Sec>
             <button onClick={saveContent} disabled={saving} style={{width:'100%',background:saving?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:800,fontSize:'16px',textTransform:'uppercase',letterSpacing:'1px',border:'none',padding:'14px',borderRadius:'8px',cursor:saving?'not-allowed':'pointer',marginTop:'8px'}}>
               {saving?'Guardando...':'💾 Guardar todos los cambios'}
             </button>
@@ -366,6 +374,20 @@ function Sec({title,children}) {
     <div style={{background:'#1E2535',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'10px',padding:'16px',marginBottom:'12px'}}>
       <div style={{fontSize:'13px',fontWeight:600,color:'#F5C518',marginBottom:'12px',textTransform:'uppercase',letterSpacing:'.5px'}}>{title}</div>
       {children}
+    </div>
+  );
+}
+
+function CF({label,val,set}) {
+  return (
+    <div style={{marginBottom:'10px'}}>
+      <label style={{fontSize:'11px',fontWeight:600,color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px',display:'block',marginBottom:'4px'}}>{label}</label>
+      <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+        <input type="color" value={val||'#F5C518'} onChange={e=>set(e.target.value)}
+          style={{width:'44px',height:'36px',border:'none',borderRadius:'6px',cursor:'pointer',background:'none',padding:'2px'}} />
+        <input type="text" value={val||''} onChange={e=>set(e.target.value)} placeholder="#F5C518"
+          style={{flex:1,background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',padding:'8px 10px',color:'#F0F4FF',fontSize:'13px',outline:'none'}} />
+      </div>
     </div>
   );
 }
