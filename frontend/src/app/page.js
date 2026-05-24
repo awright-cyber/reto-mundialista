@@ -155,13 +155,9 @@ function Nav({page,setPage,user,c}) {
   return (
     <nav style={{background:'rgba(10,14,26,0.97)',backdropFilter:'blur(12px)',padding:'0 12px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'56px',borderBottom:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',position:'sticky',top:0,zIndex:100}}>
       <div style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer'}} onClick={()=>setPage('landing')}>
-        {logoUrl ? (
-          <img src={logoUrl} alt="Logo" style={{height:'32px',objectFit:'contain'}} />
-        ) : (
-          <span style={{fontWeight:900,fontSize:'18px',color:'var(--gold)',textTransform:'uppercase',letterSpacing:'1px'}}>
-            Reto <span style={{color:'var(--text)'}}>Mundial</span>
-          </span>
-        )}
+        <span style={{fontWeight:900,fontSize:'18px',color:'var(--gold)',textTransform:'uppercase',letterSpacing:'1px'}}>
+          Reto <span style={{color:'var(--text)'}}>Mundial</span>
+        </span>
       </div>
       <div style={{display:'flex',gap:'2px',overflowX:'auto'}}>
         {tabs.map(t=>(
