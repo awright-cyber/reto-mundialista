@@ -305,7 +305,7 @@ function RegistroPage({setPage,setUser,showToast,c}) {
   );
 }
 
-function computeBracket(matches, scores) {
+function computeBracket(matches, scores, tiebreakers) {
   const standings = {};
   matches.filter(m => m.phase === 'grupos').forEach(m => {
     const g = m.group_name;
@@ -338,8 +338,15 @@ function computeBracket(matches, scores) {
     matches.filter(m => m.phase===phase).sort((a,bv) => a.match_number-bv.match_number).forEach((m,i) => {
       const tA=b[m.team_a]||m.team_a, tB=b[m.team_b]||m.team_b;
       const sa=parseInt(scores[m.id+'_a']??-1), sb=parseInt(scores[m.id+'_b']??-1);
-      b[`${prefix}W${i+1}`] = sa>sb?tA : sb>sa?tB : `Ganador partido ${m.match_number}`;
-      b[`${prefix}L${i+1}`] = sa>sb?tB : sb>sa?tA : `Perdedor partido ${m.match_number}`;
+      const tb=tiebreakers?.[m.id];
+      let winner, loser;
+      if (sa>sb){winner=tA;loser=tB;}
+      else if (sb>sa){winner=tB;loser=tA;}
+      else if (tb==='a'){winner=tA;loser=tB;}
+      else if (tb==='b'){winner=tB;loser=tA;}
+      else {winner=`Ganador partido ${m.match_number}`;loser=`Perdedor partido ${m.match_number}`;}
+      b[`${prefix}W${i+1}`]=winner;
+      b[`${prefix}L${i+1}`]=loser;
     });
   };
   propagate('round_of_32','TBD-R32-');
@@ -358,6 +365,7 @@ const PHASE_PREV = {
 function PrediccionesPage({user,showToast,c}) {
   const [matches,setMatches] = useState([]);
   const [scores,setScores] = useState({});
+  const [tiebreakers,setTiebreakers] = useState({});
   const [phase,setPhase] = useState('grupos');
   const [loading,setLoading] = useState(true);
   const [saving,setSaving] = useState(false);
@@ -369,12 +377,14 @@ function PrediccionesPage({user,showToast,c}) {
       if (user) {
         const {data:predData} = await supabase.from('predictions').select('*').eq('user_id',user.id);
         if (predData?.length) {
-          const loaded = {};
+          const loadedScores={}, loadedTb={};
           predData.forEach(p => {
-            loaded[p.match_id+'_a'] = String(p.predicted_score_a);
-            loaded[p.match_id+'_b'] = String(p.predicted_score_b);
+            loadedScores[p.match_id+'_a'] = String(p.predicted_score_a);
+            loadedScores[p.match_id+'_b'] = String(p.predicted_score_b);
+            if (p.tiebreaker) loadedTb[p.match_id] = p.tiebreaker;
           });
-          setScores(loaded);
+          setScores(loadedScores);
+          setTiebreakers(loadedTb);
         }
       }
       setLoading(false);
@@ -384,18 +394,26 @@ function PrediccionesPage({user,showToast,c}) {
 
   const phases=['grupos','round_of_32','round_of_16','quarterfinals','semifinals','third_place','final'];
   const filtered=matches.filter(m=>m.phase===phase);
-  const bracket=computeBracket(matches,scores);
+  const bracket=computeBracket(matches,scores,tiebreakers);
   const getTeam=name=>bracket[name]||name;
 
   const savePredictions = async () => {
     if (!user){showToast('Regístrate primero para guardar tus predicciones','#FF6B7A');return;}
     const missing=filtered.filter(m=>scores[m.id+'_a']===undefined||scores[m.id+'_a']===''||scores[m.id+'_b']===undefined||scores[m.id+'_b']==='');
     if (missing.length>0){showToast(`❌ Faltan ${missing.length} partido(s) sin predicción en esta fase. Completa todos antes de guardar.`,'#FF6B7A');return;}
+    if (phase!=='grupos') {
+      const sinDesempate=filtered.filter(m=>{
+        const sa=scores[m.id+'_a'], sb=scores[m.id+'_b'];
+        return sa!==undefined&&sa!==''&&sb!==undefined&&sb!==''&&sa===sb&&!tiebreakers[m.id];
+      });
+      if (sinDesempate.length>0){showToast(`❌ Hay ${sinDesempate.length} partido(s) empatado(s) sin definir ganador en penales.`,'#FF6B7A');return;}
+    }
     setSaving(true);
     const rows=filtered.map(m=>({
       user_id:user.id,match_id:m.id,
       predicted_score_a:parseInt(scores[m.id+'_a']??0),
-      predicted_score_b:parseInt(scores[m.id+'_b']??0)
+      predicted_score_b:parseInt(scores[m.id+'_b']??0),
+      tiebreaker:tiebreakers[m.id]||null
     }));
     const {error}=await supabase.from('predictions').upsert(rows,{onConflict:'user_id,match_id'});
     if (error){showToast('No se pudieron guardar. Intenta de nuevo.','#FF6B7A');setSaving(false);return;}
@@ -441,8 +459,12 @@ function PrediccionesPage({user,showToast,c}) {
             const teamA=getTeam(m.team_a), teamB=getTeam(m.team_b);
             const hasA=scores[m.id+'_a']!==undefined&&scores[m.id+'_a']!=='';
             const hasB=scores[m.id+'_b']!==undefined&&scores[m.id+'_b']!=='';
+            const isKnockout=phase!=='grupos';
+            const isDraw=hasA&&hasB&&scores[m.id+'_a']===scores[m.id+'_b'];
+            const tb=tiebreakers[m.id];
+            const needsTb=isKnockout&&isDraw&&!tb;
             return (
-              <div key={m.id} style={{background:'#1E2535',border:`1px solid ${(!hasA||!hasB)?'rgba(255,107,122,0.35)':'rgba(255,255,255,0.07)'}`,borderRadius:'10px',padding:'12px 14px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
+              <div key={m.id} style={{background:'#1E2535',border:`1px solid ${(!hasA||!hasB||needsTb)?'rgba(255,107,122,0.35)':'rgba(255,255,255,0.07)'}`,borderRadius:'10px',padding:'12px 14px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
                 <span style={{background:PHASE_COLORS[m.phase]||'rgba(245,197,24,0.1)',border:`1px solid ${PHASE_TEXT[m.phase]||'#F5C518'}40`,borderRadius:'4px',padding:'2px 7px',fontSize:'10px',fontWeight:600,color:PHASE_TEXT[m.phase]||'#F5C518',whiteSpace:'nowrap'}}>
                   {m.group_name||PHASE_LABELS[m.phase]}
                 </span>
@@ -464,6 +486,19 @@ function PrediccionesPage({user,showToast,c}) {
                   <div>{new Date(m.scheduled_at).toLocaleDateString('es-EC',{month:'short',day:'numeric',timeZone:'America/Guayaquil'})}</div>
                   <div>{new Date(m.scheduled_at).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',timeZone:'America/Guayaquil',hour12:true})}</div>
                 </div>
+                {isKnockout&&isDraw&&(
+                  <div style={{width:'100%',display:'flex',alignItems:'center',gap:'8px',marginTop:'4px',paddingTop:'8px',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+                    <span style={{fontSize:'11px',color:'#F97316',whiteSpace:'nowrap'}}>⚽ Empate — ganador en penales:</span>
+                    <button onClick={()=>setTiebreakers(prev=>({...prev,[m.id]:'a'}))}
+                      style={{flex:1,padding:'5px 8px',borderRadius:'6px',border:`1px solid ${tb==='a'?'#22C55E':'rgba(255,255,255,0.1)'}`,background:tb==='a'?'rgba(34,197,94,0.15)':'#1C2333',color:tb==='a'?'#22C55E':'#8899BB',fontSize:'11px',fontWeight:700,cursor:'pointer'}}>
+                      {teamA}
+                    </button>
+                    <button onClick={()=>setTiebreakers(prev=>({...prev,[m.id]:'b'}))}
+                      style={{flex:1,padding:'5px 8px',borderRadius:'6px',border:`1px solid ${tb==='b'?'#22C55E':'rgba(255,255,255,0.1)'}`,background:tb==='b'?'rgba(34,197,94,0.15)':'#1C2333',color:tb==='b'?'#22C55E':'#8899BB',fontSize:'11px',fontWeight:700,cursor:'pointer'}}>
+                      {teamB}
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
