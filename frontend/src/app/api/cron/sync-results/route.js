@@ -76,15 +76,16 @@ async function processFixture({ fixture, goals, teams, score }) {
   const newStatus = STATUS_MAP[fixture.status.short] || 'pending';
 
   let { data: match } = await supabase
-    .from('matches').select('id,status,score_a,score_b')
+    .from('matches').select('id,status,score_a,score_b,team_a,team_b,phase')
     .eq('external_id', externalId).single();
 
   if (!match) {
-    // Buscar por nombre de equipos
-    const { data: m } = await supabase.from('matches').select('id,status,score_a,score_b')
+    // Para fase de grupos: buscar por nombre de equipos (los knockout tienen TBD-*)
+    const { data: m } = await supabase.from('matches').select('id,status,score_a,score_b,team_a,team_b,phase')
       .ilike('team_a', `%${teams.home.name.split(' ')[0]}%`)
-      .ilike('team_b', `%${teams.away.name.split(' ')[0]}%`).single();
-    if (!m) return { updated: false };
+      .ilike('team_b', `%${teams.away.name.split(' ')[0]}%`)
+      .eq('phase', 'grupos').single();
+    if (!m) return { updated: false, reason: 'match_not_found' };
     await supabase.from('matches').update({ external_id: externalId }).eq('id', m.id);
     match = m;
   }
@@ -102,10 +103,22 @@ async function processFixture({ fixture, goals, teams, score }) {
     else if (goals.away > goals.home) winnerCode = teams.away.code;
   }
 
+  // En eliminatorias: actualizar nombres de equipos si aún están como TBD
+  const teamUpdates = {};
+  if (match.team_a?.startsWith('TBD')) {
+    teamUpdates.team_a = teams.home.name;
+    teamUpdates.team_a_code = teams.home.code;
+  }
+  if (match.team_b?.startsWith('TBD')) {
+    teamUpdates.team_b = teams.away.name;
+    teamUpdates.team_b_code = teams.away.code;
+  }
+
   await supabase.from('matches').update({
     status: newStatus,
     score_a: goals.home ?? match.score_a,
     score_b: goals.away ?? match.score_b,
+    ...teamUpdates,
     went_to_penalties: wentToPen,
     penalty_score_a: pen?.home || null,
     penalty_score_b: pen?.away || null,

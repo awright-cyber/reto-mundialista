@@ -427,7 +427,10 @@ function PrediccionesPage({user,showToast,c}) {
       user_id:user.id,match_id:m.id,
       predicted_score_a:parseInt(scores[m.id+'_a']??0),
       predicted_score_b:parseInt(scores[m.id+'_b']??0),
-      tiebreaker:tiebreakers[m.id]||null
+      tiebreaker:tiebreakers[m.id]||null,
+      // En eliminatorias guardamos los equipos que el usuario predijo que jugarían
+      predicted_team_a: phase!=='grupos' ? getTeam(m.team_a) : null,
+      predicted_team_b: phase!=='grupos' ? getTeam(m.team_b) : null,
     }));
     const {error}=await supabase.from('predictions').upsert(rows,{onConflict:'user_id,match_id'});
     if (error){showToast('No se pudieron guardar. Intenta de nuevo.','#FF6B7A');setSaving(false);return;}
