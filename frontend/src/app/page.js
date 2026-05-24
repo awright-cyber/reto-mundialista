@@ -327,19 +327,19 @@ function computeBracket(matches, scores) {
   const letters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
   letters.forEach(l => {
     const t = sorted[`Grupo ${l}`] || [];
-    b[`TBD-1${l}`] = t[0]?.name || `1° G${l}`;
-    b[`TBD-2${l}`] = t[1]?.name || `2° G${l}`;
+    b[`TBD-1${l}`] = t[0]?.name || `1° Grupo ${l}`;
+    b[`TBD-2${l}`] = t[1]?.name || `2° Grupo ${l}`;
   });
   const thirds = letters
-    .map(l => sorted[`Grupo ${l}`]?.[2] || {name:`3° G${l}`, pts:0, gd:0, gf:0})
+    .map(l => sorted[`Grupo ${l}`]?.[2] || {name:`3° Grupo ${l}`, pts:0, gd:0, gf:0})
     .sort((a,bv) => bv.pts-a.pts || bv.gd-a.gd || bv.gf-a.gf);
-  thirds.slice(0,8).forEach((t,i) => { b[`TBD-W${i+1}`] = t.name; });
+  thirds.slice(0,8).forEach((t,i) => { b[`TBD-W${i+1}`] = t.name || `Mejor 3° #${i+1}`; });
   const propagate = (phase, prefix) => {
     matches.filter(m => m.phase===phase).sort((a,bv) => a.match_number-bv.match_number).forEach((m,i) => {
       const tA=b[m.team_a]||m.team_a, tB=b[m.team_b]||m.team_b;
       const sa=parseInt(scores[m.id+'_a']??-1), sb=parseInt(scores[m.id+'_b']??-1);
-      b[`${prefix}W${i+1}`] = sa>sb?tA : sb>sa?tB : `Gan. P${m.match_number}`;
-      b[`${prefix}L${i+1}`] = sa>sb?tB : sb>sa?tA : `Per. P${m.match_number}`;
+      b[`${prefix}W${i+1}`] = sa>sb?tA : sb>sa?tB : `Ganador partido ${m.match_number}`;
+      b[`${prefix}L${i+1}`] = sa>sb?tB : sb>sa?tA : `Perdedor partido ${m.match_number}`;
     });
   };
   propagate('round_of_32','TBD-R32-');
@@ -348,6 +348,12 @@ function computeBracket(matches, scores) {
   propagate('semifinals','TBD-SF-');
   return b;
 }
+
+const PHASE_PREV = {
+  round_of_32:'Fase de Grupos', round_of_16:'Ronda de 32',
+  quarterfinals:'Octavos de final', semifinals:'Cuartos de final',
+  third_place:'Semifinales', final:'Semifinales'
+};
 
 function PrediccionesPage({user,showToast,c}) {
   const [matches,setMatches] = useState([]);
@@ -392,8 +398,12 @@ function PrediccionesPage({user,showToast,c}) {
     }).filter(r=>r.match_id);
     if (!rows.length){showToast('Ingresa al menos una predicción','#FF6B7A');setSaving(false);return;}
     const {error}=await supabase.from('predictions').upsert(rows,{onConflict:'user_id,match_id'});
-    if (error){showToast('Error al guardar: '+error.message,'#FF6B7A');}
-    else{showToast(`✅ ${rows.length} predicciones guardadas`,'#22C55E');}
+    if (error){showToast('No se pudieron guardar las predicciones. Verifica tu conexión e intenta de nuevo.','#FF6B7A');}
+    else {
+      const nextPhaseIdx = phases.indexOf(phase)+1;
+      const nextPhase = nextPhaseIdx < phases.length ? PHASE_LABELS[phases[nextPhaseIdx]] : null;
+      showToast(nextPhase ? `✅ ${rows.length} predicciones guardadas. Ahora completa: ${nextPhase}` : `✅ ¡Predicciones completas! ${rows.length} partidos guardados`,'#22C55E');
+    }
     setSaving(false);
   };
 
@@ -413,6 +423,11 @@ function PrediccionesPage({user,showToast,c}) {
           );
         })}
       </div>
+      {phase !== 'grupos' && (
+        <div style={{background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.25)',borderRadius:'8px',padding:'10px 14px',marginBottom:'12px',fontSize:'12px',color:'#93C5FD'}}>
+          ℹ️ Los equipos de esta fase se calculan automáticamente según tus predicciones de la <strong>{PHASE_PREV[phase]}</strong>. Completa las fases en orden y guarda cada una.
+        </div>
+      )}
       {loading?(
         <div style={{textAlign:'center',padding:'40px',color:'#8899BB'}}>Cargando partidos...</div>
       ):(
