@@ -390,19 +390,24 @@ function PrediccionesPage({user,showToast,c}) {
   const savePredictions = async () => {
     if (!user){showToast('Regístrate primero para guardar tus predicciones','#FF6B7A');return;}
     const missing=filtered.filter(m=>scores[m.id+'_a']===undefined||scores[m.id+'_a']===''||scores[m.id+'_b']===undefined||scores[m.id+'_b']==='');
-    if (missing.length>0){showToast(`❌ Faltan ${missing.length} predicción(es) en esta fase. Completa todos los partidos.`,'#FF6B7A');return;}
+    if (missing.length>0){showToast(`❌ Faltan ${missing.length} partido(s) sin predicción en esta fase. Completa todos antes de guardar.`,'#FF6B7A');return;}
     setSaving(true);
-    const rows=Object.keys(scores).filter(k=>k.endsWith('_a')).map(k=>{
-      const matchId=k.replace('_a','');
-      return {user_id:user.id,match_id:matchId,predicted_score_a:parseInt(scores[k]??0),predicted_score_b:parseInt(scores[matchId+'_b']??0)};
-    }).filter(r=>r.match_id);
-    if (!rows.length){showToast('Ingresa al menos una predicción','#FF6B7A');setSaving(false);return;}
+    const rows=filtered.map(m=>({
+      user_id:user.id,match_id:m.id,
+      predicted_score_a:parseInt(scores[m.id+'_a']??0),
+      predicted_score_b:parseInt(scores[m.id+'_b']??0)
+    }));
     const {error}=await supabase.from('predictions').upsert(rows,{onConflict:'user_id,match_id'});
-    if (error){showToast('No se pudieron guardar las predicciones. Verifica tu conexión e intenta de nuevo.','#FF6B7A');}
-    else {
-      const nextPhaseIdx = phases.indexOf(phase)+1;
-      const nextPhase = nextPhaseIdx < phases.length ? PHASE_LABELS[phases[nextPhaseIdx]] : null;
-      showToast(nextPhase ? `✅ ${rows.length} predicciones guardadas. Ahora completa: ${nextPhase}` : `✅ ¡Predicciones completas! ${rows.length} partidos guardados`,'#22C55E');
+    if (error){showToast('No se pudieron guardar. Intenta de nuevo.','#FF6B7A');setSaving(false);return;}
+    const faltantes=phases.filter(p=>{
+      const pm=matches.filter(m=>m.phase===p);
+      if(!pm.length)return false;
+      return pm.some(m=>scores[m.id+'_a']===undefined||scores[m.id+'_a']==='');
+    }).filter(p=>p!==phase).map(p=>PHASE_LABELS[p]);
+    if(faltantes.length>0){
+      showToast(`✅ ${PHASE_LABELS[phase]} guardada. Faltan por completar: ${faltantes.join(', ')}`, '#F5C518');
+    } else {
+      showToast(`✅ ¡Todas las fases completas! ${rows.length} predicciones guardadas.`,'#22C55E');
     }
     setSaving(false);
   };
