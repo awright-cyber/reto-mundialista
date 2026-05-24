@@ -300,6 +300,50 @@ function RegistroPage({setPage,setUser,showToast,c}) {
   );
 }
 
+function computeBracket(matches, scores) {
+  const standings = {};
+  matches.filter(m => m.phase === 'grupos').forEach(m => {
+    const g = m.group_name;
+    if (!standings[g]) standings[g] = {};
+    if (!standings[g][m.team_a]) standings[g][m.team_a] = {name:m.team_a, code:m.team_a_code, pts:0, gf:0, ga:0, gd:0};
+    if (!standings[g][m.team_b]) standings[g][m.team_b] = {name:m.team_b, code:m.team_b_code, pts:0, gf:0, ga:0, gd:0};
+    const sa = parseInt(scores[m.id+'_a'] ?? 0), sb = parseInt(scores[m.id+'_b'] ?? 0);
+    standings[g][m.team_a].gf+=sa; standings[g][m.team_a].ga+=sb; standings[g][m.team_a].gd+=sa-sb;
+    standings[g][m.team_b].gf+=sb; standings[g][m.team_b].ga+=sa; standings[g][m.team_b].gd+=sb-sa;
+    if (sa>sb) standings[g][m.team_a].pts+=3;
+    else if (sa===sb) { standings[g][m.team_a].pts+=1; standings[g][m.team_b].pts+=1; }
+    else standings[g][m.team_b].pts+=3;
+  });
+  const sorted = {};
+  Object.entries(standings).forEach(([g,teams]) => {
+    sorted[g] = Object.values(teams).sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf || a.name.localeCompare(b.name));
+  });
+  const b = {};
+  const letters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  letters.forEach(l => {
+    const t = sorted[`Grupo ${l}`] || [];
+    b[`TBD-1${l}`] = t[0]?.name || `1° G${l}`;
+    b[`TBD-2${l}`] = t[1]?.name || `2° G${l}`;
+  });
+  const thirds = letters
+    .map(l => sorted[`Grupo ${l}`]?.[2] || {name:`3° G${l}`, pts:0, gd:0, gf:0})
+    .sort((a,bv) => bv.pts-a.pts || bv.gd-a.gd || bv.gf-a.gf);
+  thirds.slice(0,8).forEach((t,i) => { b[`TBD-W${i+1}`] = t.name; });
+  const propagate = (phase, prefix) => {
+    matches.filter(m => m.phase===phase).sort((a,bv) => a.match_number-bv.match_number).forEach((m,i) => {
+      const tA=b[m.team_a]||m.team_a, tB=b[m.team_b]||m.team_b;
+      const sa=parseInt(scores[m.id+'_a']??-1), sb=parseInt(scores[m.id+'_b']??-1);
+      b[`${prefix}W${i+1}`] = sa>sb?tA : sb>sa?tB : `Gan. P${m.match_number}`;
+      b[`${prefix}L${i+1}`] = sa>sb?tB : sb>sa?tA : `Per. P${m.match_number}`;
+    });
+  };
+  propagate('round_of_32','TBD-R32-');
+  propagate('round_of_16','TBD-R16-');
+  propagate('quarterfinals','TBD-QF-');
+  propagate('semifinals','TBD-SF-');
+  return b;
+}
+
 function PrediccionesPage({user,showToast,c}) {
   const [matches,setMatches] = useState([]);
   const [scores,setScores] = useState({});
@@ -308,19 +352,38 @@ function PrediccionesPage({user,showToast,c}) {
   const [saving,setSaving] = useState(false);
 
   useEffect(()=>{
-    supabase.from('matches').select('*').order('match_number',{ascending:true})
-      .then(({data})=>{setMatches(data||[]);setLoading(false);});
-  },[]);
+    const load = async () => {
+      const {data:matchData} = await supabase.from('matches').select('*').order('match_number',{ascending:true});
+      setMatches(matchData||[]);
+      if (user) {
+        const {data:predData} = await supabase.from('predictions').select('*').eq('user_id',user.id);
+        if (predData?.length) {
+          const loaded = {};
+          predData.forEach(p => {
+            loaded[p.match_id+'_a'] = String(p.predicted_score_a);
+            loaded[p.match_id+'_b'] = String(p.predicted_score_b);
+          });
+          setScores(loaded);
+        }
+      }
+      setLoading(false);
+    };
+    load();
+  },[user]);
 
   const phases=['grupos','round_of_32','round_of_16','quarterfinals','semifinals','third_place','final'];
   const filtered=matches.filter(m=>m.phase===phase);
+  const bracket=computeBracket(matches,scores);
+  const getTeam=name=>bracket[name]||name;
 
   const savePredictions = async () => {
     if (!user){showToast('Regístrate primero para guardar tus predicciones','#FF6B7A');return;}
+    const missing=filtered.filter(m=>scores[m.id+'_a']===undefined||scores[m.id+'_a']===''||scores[m.id+'_b']===undefined||scores[m.id+'_b']==='');
+    if (missing.length>0){showToast(`❌ Faltan ${missing.length} predicción(es) en esta fase. Completa todos los partidos.`,'#FF6B7A');return;}
     setSaving(true);
-    const rows=Object.entries(scores).filter(([k])=>k.endsWith('_a')).map(([k])=>{
+    const rows=Object.keys(scores).filter(k=>k.endsWith('_a')).map(k=>{
       const matchId=k.replace('_a','');
-      return {user_id:user.id,match_id:matchId,predicted_score_a:parseInt(scores[k]||0),predicted_score_b:parseInt(scores[matchId+'_b']||0)};
+      return {user_id:user.id,match_id:matchId,predicted_score_a:parseInt(scores[k]??0),predicted_score_b:parseInt(scores[matchId+'_b']??0)};
     }).filter(r=>r.match_id);
     if (!rows.length){showToast('Ingresa al menos una predicción','#FF6B7A');setSaving(false);return;}
     const {error}=await supabase.from('predictions').upsert(rows,{onConflict:'user_id,match_id'});
@@ -332,43 +395,53 @@ function PrediccionesPage({user,showToast,c}) {
   return (
     <div style={{padding:'20px',maxWidth:'900px',margin:'0 auto'}}>
       <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Mis <span style={{color:'var(--gold)'}}>Predicciones</span></h2>
-      <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'14px'}}>Ingresa el marcador que crees que tendrá cada partido</p>
+      <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'14px'}}>Llena todas las fases antes del 10 de junio · Los equipos de eliminatorias se calculan según tus predicciones de grupos</p>
       <div style={{display:'flex',gap:'6px',overflowX:'auto',paddingBottom:'4px',marginBottom:'16px'}}>
-        {phases.map(p=>(
-          <button key={p} onClick={()=>setPhase(p)} style={{background:phase===p?'rgba(245,197,24,0.15)':'#1C2333',border:`1px solid ${phase===p?'rgba(245,197,24,0.3)':'rgba(255,255,255,0.08)'}`,borderRadius:'6px',padding:'6px 12px',fontSize:'11px',fontWeight:600,color:phase===p?'#F5C518':'#8899BB',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,textTransform:'uppercase',letterSpacing:'.5px'}}>
-            {PHASE_LABELS[p]}
-          </button>
-        ))}
+        {phases.map(p=>{
+          const pm=matches.filter(m=>m.phase===p);
+          const filled=pm.filter(m=>scores[m.id+'_a']!==undefined&&scores[m.id+'_a']!=='').length;
+          const complete=pm.length>0&&filled===pm.length;
+          return (
+            <button key={p} onClick={()=>setPhase(p)} style={{background:phase===p?'rgba(245,197,24,0.15)':'#1C2333',border:`1px solid ${phase===p?'rgba(245,197,24,0.3)':'rgba(255,255,255,0.08)'}`,borderRadius:'6px',padding:'6px 12px',fontSize:'11px',fontWeight:600,color:phase===p?'#F5C518':complete?'#22C55E':'#8899BB',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,textTransform:'uppercase',letterSpacing:'.5px'}}>
+              {complete?'✅ ':''}{PHASE_LABELS[p]}
+            </button>
+          );
+        })}
       </div>
       {loading?(
         <div style={{textAlign:'center',padding:'40px',color:'#8899BB'}}>Cargando partidos...</div>
       ):(
         <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-          {filtered.map(m=>(
-            <div key={m.id} style={{background:'#1E2535',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'10px',padding:'12px 14px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
-              <span style={{background:PHASE_COLORS[m.phase]||'rgba(245,197,24,0.1)',border:`1px solid ${PHASE_TEXT[m.phase]||'#F5C518'}40`,borderRadius:'4px',padding:'2px 7px',fontSize:'10px',fontWeight:600,color:PHASE_TEXT[m.phase]||'#F5C518',whiteSpace:'nowrap'}}>
-                {m.group_name||PHASE_LABELS[m.phase]}
-              </span>
-              <div style={{flex:1,display:'flex',alignItems:'center',gap:'6px',minWidth:'140px'}}>
-                <FlagImg code={m.team_a_code} name={m.team_a} />
-                <span style={{fontWeight:700,fontSize:'13px'}}>{m.team_a}</span>
-                <span style={{color:'#8899BB',fontSize:'11px'}}>vs</span>
-                <FlagImg code={m.team_b_code} name={m.team_b} />
-                <span style={{fontWeight:700,fontSize:'13px'}}>{m.team_b}</span>
+          {filtered.map(m=>{
+            const teamA=getTeam(m.team_a), teamB=getTeam(m.team_b);
+            const hasA=scores[m.id+'_a']!==undefined&&scores[m.id+'_a']!=='';
+            const hasB=scores[m.id+'_b']!==undefined&&scores[m.id+'_b']!=='';
+            return (
+              <div key={m.id} style={{background:'#1E2535',border:`1px solid ${(!hasA||!hasB)?'rgba(255,107,122,0.35)':'rgba(255,255,255,0.07)'}`,borderRadius:'10px',padding:'12px 14px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
+                <span style={{background:PHASE_COLORS[m.phase]||'rgba(245,197,24,0.1)',border:`1px solid ${PHASE_TEXT[m.phase]||'#F5C518'}40`,borderRadius:'4px',padding:'2px 7px',fontSize:'10px',fontWeight:600,color:PHASE_TEXT[m.phase]||'#F5C518',whiteSpace:'nowrap'}}>
+                  {m.group_name||PHASE_LABELS[m.phase]}
+                </span>
+                <div style={{flex:1,display:'flex',alignItems:'center',gap:'6px',minWidth:'140px'}}>
+                  <FlagImg code={m.team_a_code} name={teamA} />
+                  <span style={{fontWeight:700,fontSize:'13px'}}>{teamA}</span>
+                  <span style={{color:'#8899BB',fontSize:'11px'}}>vs</span>
+                  <FlagImg code={m.team_b_code} name={teamB} />
+                  <span style={{fontWeight:700,fontSize:'13px'}}>{teamB}</span>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                  <input type="number" min="0" max="20" placeholder="?" value={scores[m.id+'_a']??''} onChange={e=>setScores(prev=>({...prev,[m.id+'_a']:e.target.value}))}
+                    style={{width:'36px',height:'36px',background:'#1C2333',border:`1px solid ${hasA?'rgba(255,255,255,0.12)':'rgba(255,107,122,0.5)'}`,borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center'}} />
+                  <span style={{color:'#8899BB',fontWeight:700}}>-</span>
+                  <input type="number" min="0" max="20" placeholder="?" value={scores[m.id+'_b']??''} onChange={e=>setScores(prev=>({...prev,[m.id+'_b']:e.target.value}))}
+                    style={{width:'36px',height:'36px',background:'#1C2333',border:`1px solid ${hasB?'rgba(255,255,255,0.12)':'rgba(255,107,122,0.5)'}`,borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center'}} />
+                </div>
+                <div style={{fontSize:'11px',color:'#8899BB',textAlign:'right',minWidth:'65px'}}>
+                  <div>{new Date(m.scheduled_at).toLocaleDateString('es-EC',{month:'short',day:'numeric',timeZone:'America/Guayaquil'})}</div>
+                  <div>{new Date(m.scheduled_at).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',timeZone:'America/Guayaquil',hour12:true})}</div>
+                </div>
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
-                <input type="number" min="0" max="20" placeholder="0" value={scores[m.id+'_a']||''} onChange={e=>setScores({...scores,[m.id+'_a']:e.target.value})}
-                  style={{width:'36px',height:'36px',background:'#1C2333',border:'1px solid rgba(255,255,255,0.12)',borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center'}} />
-                <span style={{color:'#8899BB',fontWeight:700}}>-</span>
-                <input type="number" min="0" max="20" placeholder="0" value={scores[m.id+'_b']||''} onChange={e=>setScores({...scores,[m.id+'_b']:e.target.value})}
-                  style={{width:'36px',height:'36px',background:'#1C2333',border:'1px solid rgba(255,255,255,0.12)',borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center'}} />
-              </div>
-              <div style={{fontSize:'11px',color:'#8899BB',textAlign:'right',minWidth:'65px'}}>
-                <div>{new Date(m.scheduled_at).toLocaleDateString('es-EC',{month:'short',day:'numeric',timeZone:'America/Guayaquil'})}</div>
-                <div>{new Date(m.scheduled_at).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',timeZone:'America/Guayaquil',hour12:true})}</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {filtered.length===0&&<div style={{textAlign:'center',padding:'40px',color:'#8899BB'}}>No hay partidos en esta fase aún</div>}
         </div>
       )}
