@@ -53,6 +53,11 @@ const DEFAULT_CONTENT = {
   event_schedule:'📅 Todos los días del Mundial · 16h00 - 22h00',
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
   link_terms:'#',link_instagram:'#',link_whatsapp:'#',link_website:'https://www.plazalasamericas.ec',
+  footer_link_website_label:'🌐 Plaza Las Américas',
+  footer_link_instagram_label:'📸 Instagram',
+  footer_link_whatsapp_label:'💬 WhatsApp',
+  footer_link_terms_label:'📄 Términos y Condiciones',
+  footer_copyright:'© 2026 Reto Mundialista · Plaza Las Américas · Participación 100% gratuita',
 };
 
 function useContent() {
@@ -178,10 +183,10 @@ function Nav({page,setPage,user,c}) {
 function Footer({c}) {
   const logoUrl = c('logo_url');
   const links = [
-    {url: c('link_website'), label: '🏬 Plaza Las Américas', bold: true},
-    {url: c('link_instagram'), label: '📸 Instagram'},
-    {url: c('link_whatsapp'), label: '💬 WhatsApp'},
-    {url: c('link_terms'), label: '📄 Términos y Condiciones'},
+    {url: c('link_website'), label: c('footer_link_website_label'), bold: true},
+    {url: c('link_instagram'), label: c('footer_link_instagram_label')},
+    {url: c('link_whatsapp'), label: c('footer_link_whatsapp_label')},
+    {url: c('link_terms'), label: c('footer_link_terms_label')},
   ].filter(l => l.url && l.url !== '#' && l.url.trim() !== '');
 
   return (
@@ -201,7 +206,7 @@ function Footer({c}) {
           ))}
         </div>
       )}
-      <p style={{fontSize:'11px',color:'#8899BB'}}>© 2026 Reto Mundialista · Plaza Las Américas · Participación 100% gratuita</p>
+      <p style={{fontSize:'11px',color:'#8899BB'}}>{c('footer_copyright')}</p>
     </footer>
   );
 }

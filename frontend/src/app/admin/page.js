@@ -20,6 +20,11 @@ const DEFAULT_CONTENT = {
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
   link_terms:'',link_instagram:'',link_whatsapp:'',link_website:'https://www.plazalasamericas.ec',
   logo_url:'',
+  footer_link_website_label:'🌐 Plaza Las Américas',
+  footer_link_instagram_label:'📸 Instagram',
+  footer_link_whatsapp_label:'💬 WhatsApp',
+  footer_link_terms_label:'📄 Términos y Condiciones',
+  footer_copyright:'© 2026 Reto Mundialista · Plaza Las Américas · Participación 100% gratuita',
 };
 
 export default function AdminPage() {
@@ -184,6 +189,13 @@ export default function AdminPage() {
               <F label="Instagram (dejar vacío para ocultar)" val={s('link_instagram')} set={v=>set('link_instagram',v)} />
               <F label="WhatsApp / Contacto (dejar vacío para ocultar)" val={s('link_whatsapp')} set={v=>set('link_whatsapp',v)} />
               <F label="Términos y Condiciones (dejar vacío para ocultar)" val={s('link_terms')} set={v=>set('link_terms',v)} />
+            </Sec>
+            <Sec title="🦶 Footer — Textos">
+              <F label="Texto link Plaza Las Américas" val={s('footer_link_website_label')} set={v=>set('footer_link_website_label',v)} />
+              <F label="Texto link Instagram" val={s('footer_link_instagram_label')} set={v=>set('footer_link_instagram_label',v)} />
+              <F label="Texto link WhatsApp" val={s('footer_link_whatsapp_label')} set={v=>set('footer_link_whatsapp_label',v)} />
+              <F label="Texto link Términos y Condiciones" val={s('footer_link_terms_label')} set={v=>set('footer_link_terms_label',v)} />
+              <F label="Texto copyright (línea inferior)" val={s('footer_copyright')} set={v=>set('footer_copyright',v)} />
             </Sec>
             <Sec title="🎨 Colores de la app">
               <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>El color anaranjado de Plaza Las Américas es <strong style={{color:'#E8611A'}}>#E8611A</strong>. Haz clic en el cuadro de color o escribe el código hexadecimal.</p>
