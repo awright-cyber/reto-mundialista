@@ -16,10 +16,15 @@ const barlow = Barlow({
 export const metadata = {
   title: 'Reto Mundialista — Plaza Las Américas 2026',
   description: 'Predice todos los partidos del Mundial 2026 y gana premios exclusivos en Plaza Las Américas. ¡Participación 100% gratuita!',
+  icons: {
+    icon: 'https://i.imgur.com/fcCIRc7.png',
+    apple: 'https://i.imgur.com/fcCIRc7.png',
+  },
   openGraph: {
     title: 'Reto Mundialista — Plaza Las Américas',
     description: 'Predice el Mundial 2026 y gana en Plaza Las Américas. Gratis.',
     url: 'https://reto.plazalasamericas.ec',
+    images: ['https://i.imgur.com/fcCIRc7.png'],
   },
 };
 
