@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -366,6 +366,7 @@ function PrediccionesPage({user,showToast,c}) {
   const [matches,setMatches] = useState([]);
   const [scores,setScores] = useState({});
   const [tiebreakers,setTiebreakers] = useState({});
+  const [originalBracket,setOriginalBracket] = useState(null);
   const [phase,setPhase] = useState('grupos');
   const [loading,setLoading] = useState(true);
   const [saving,setSaving] = useState(false);
@@ -385,6 +386,7 @@ function PrediccionesPage({user,showToast,c}) {
           });
           setScores(loadedScores);
           setTiebreakers(loadedTb);
+          setOriginalBracket(computeBracket(matchData||[], loadedScores, loadedTb));
         }
       }
       setLoading(false);
@@ -396,6 +398,18 @@ function PrediccionesPage({user,showToast,c}) {
   const filtered=matches.filter(m=>m.phase===phase);
   const bracket=computeBracket(matches,scores,tiebreakers);
   const getTeam=name=>bracket[name]||name;
+
+  const knockoutPhases=['round_of_32','round_of_16','quarterfinals','semifinals','third_place','final'];
+  const affectedPhases=useMemo(()=>{
+    if (!originalBracket) return [];
+    return knockoutPhases.filter(p=>{
+      return matches.filter(m=>m.phase===p).some(m=>{
+        const prevA=originalBracket[m.team_a]||m.team_a, nowA=bracket[m.team_a]||m.team_a;
+        const prevB=originalBracket[m.team_b]||m.team_b, nowB=bracket[m.team_b]||m.team_b;
+        return prevA!==nowA || prevB!==nowB;
+      });
+    }).map(p=>PHASE_LABELS[p]);
+  },[bracket,originalBracket,matches]);
 
   const savePredictions = async () => {
     if (!user){showToast('Regístrate primero para guardar tus predicciones','#FF6B7A');return;}
@@ -422,6 +436,7 @@ function PrediccionesPage({user,showToast,c}) {
       if(!pm.length)return false;
       return pm.some(m=>scores[m.id+'_a']===undefined||scores[m.id+'_a']==='');
     }).filter(p=>p!==phase).map(p=>PHASE_LABELS[p]);
+    setOriginalBracket(computeBracket(matches, scores, tiebreakers));
     if(faltantes.length>0){
       showToast(`✅ ${PHASE_LABELS[phase]} guardada. Faltan por completar: ${faltantes.join(', ')}`, '#F5C518');
     } else {
@@ -434,6 +449,11 @@ function PrediccionesPage({user,showToast,c}) {
     <div style={{padding:'20px',maxWidth:'900px',margin:'0 auto'}}>
       <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Mis <span style={{color:'var(--gold)'}}>Predicciones</span></h2>
       <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'14px'}}>Llena todas las fases antes del 10 de junio · Los equipos de eliminatorias se calculan según tus predicciones de grupos</p>
+      {affectedPhases.length>0&&(
+        <div style={{background:'rgba(249,115,22,0.1)',border:'1px solid rgba(249,115,22,0.35)',borderRadius:'8px',padding:'10px 14px',marginBottom:'12px',fontSize:'12px',color:'#FCA44A'}}>
+          ⚠️ Modificaste predicciones que cambian los equipos clasificados. Las siguientes fases tienen partidos afectados y deben revisarse: <strong>{affectedPhases.join(', ')}</strong>. Guarda cada fase afectada para confirmar los cambios.
+        </div>
+      )}
       <div style={{display:'flex',gap:'6px',overflowX:'auto',paddingBottom:'4px',marginBottom:'16px'}}>
         {phases.map(p=>{
           const pm=matches.filter(m=>m.phase===p);
