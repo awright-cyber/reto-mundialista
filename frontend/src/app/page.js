@@ -169,7 +169,11 @@ function Nav({page,setPage,user,c}) {
         ))}
       </div>
       <a href={websiteLink} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:'5px',background:'rgba(var(--gold-rgb,245,197,24),0.1)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',borderRadius:'6px',padding:'5px 10px',fontSize:'11px',fontWeight:600,color:'var(--gold)',textDecoration:'none',whiteSpace:'nowrap'}}>
-        🏬 Plaza
+        {logoUrl ? (
+          <img src={logoUrl} alt="Plaza Las Américas" style={{height:'28px',objectFit:'contain'}} />
+        ) : (
+          '🏬 Plaza'
+        )}
       </a>
     </nav>
   );
