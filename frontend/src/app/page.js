@@ -52,6 +52,8 @@ const DEFAULT_CONTENT = {
   event_description:'Pantallas gigantes · Activaciones · Sorteos en vivo',
   event_schedule:'📅 Todos los días del Mundial · 16h00 - 22h00',
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
+  color_card:'#1E2535',color_muted:'#8899BB',
+  background_type:'solid',background_value:'',background_overlay:'50',
   link_terms:'#',link_instagram:'#',link_whatsapp:'#',link_website:'https://www.plazalasamericas.ec',
   footer_link_website_label:'🌐 Plaza Las Américas',
   footer_link_instagram_label:'📸 Instagram',
@@ -59,6 +61,11 @@ const DEFAULT_CONTENT = {
   footer_link_terms_label:'📄 Términos y Condiciones',
   footer_copyright:'© 2026 Reto Mundialista · Plaza Las Américas · Participación 100% gratuita',
 };
+
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  return `${parseInt(h.substring(0,2),16)},${parseInt(h.substring(2,4),16)},${parseInt(h.substring(4,6),16)}`;
+}
 
 function useContent() {
   const [content,setContent] = useState(DEFAULT_CONTENT);
@@ -69,24 +76,24 @@ function useContent() {
           const obj={};
           data.forEach(r=>{obj[r.key]=r.value;});
           setContent(prev=>({...prev,...obj}));
-          // Aplicar colores dinámicos como variables CSS globales
           const root = document.documentElement;
-          const colorMap = obj;
-          if (colorMap.color_primary) {
-            root.style.setProperty('--gold', colorMap.color_primary);
-            root.style.setProperty('--gold2', colorMap.color_primary);
-            // También actualizar rgba para transparencias
-            const hex = colorMap.color_primary.replace('#','');
-            const r2 = parseInt(hex.substring(0,2),16);
-            const g2 = parseInt(hex.substring(2,4),16);
-            const b2 = parseInt(hex.substring(4,6),16);
-            root.style.setProperty('--gold-rgb', `${r2},${g2},${b2}`);
+          const cm = obj;
+          if (cm.color_primary) {
+            root.style.setProperty('--gold', cm.color_primary);
+            root.style.setProperty('--gold2', cm.color_primary);
+            root.style.setProperty('--gold-rgb', hexToRgb(cm.color_primary));
           }
-          if (colorMap.color_background) {
-            root.style.setProperty('--dark', colorMap.color_background);
-            root.style.setProperty('--dark2', colorMap.color_background);
+          if (cm.color_background) {
+            root.style.setProperty('--dark', cm.color_background);
+            root.style.setProperty('--dark2', cm.color_background);
+            root.style.setProperty('--dark-rgb', hexToRgb(cm.color_background));
           }
-          if (colorMap.color_text) root.style.setProperty('--text', colorMap.color_text);
+          if (cm.color_card) {
+            root.style.setProperty('--card', cm.color_card);
+            root.style.setProperty('--dark3', cm.color_card);
+          }
+          if (cm.color_text) root.style.setProperty('--text', cm.color_text);
+          if (cm.color_muted) root.style.setProperty('--muted', cm.color_muted);
         }
       });
   },[]);
@@ -106,11 +113,25 @@ export default function Home() {
 
   const c = (key) => content[key] || DEFAULT_CONTENT[key] || '';
 
+  const bgType = content.background_type || 'solid';
+  const bgValue = content.background_value || '';
+  const bgOverlay = Math.min(90, Math.max(0, parseInt(content.background_overlay || '50')));
+
+  const mainBgStyle = bgType === 'gradient' && bgValue
+    ? { background: bgValue }
+    : bgType === 'image' && bgValue
+      ? { background: 'transparent' }
+      : { background: 'var(--dark)' };
+
   return (
-    <div style={{minHeight:'100vh',background:'#0A0E1A',color:'#F0F4FF',fontFamily:'sans-serif'}}>
+    <div style={{minHeight:'100vh',color:'var(--text)',fontFamily:'sans-serif',position:'relative',...mainBgStyle}}>
+      {bgType === 'image' && bgValue && <>
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,backgroundImage:`url(${bgValue})`,backgroundSize:'cover',backgroundPosition:'center',zIndex:-2}} />
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:`rgba(var(--dark-rgb,10,14,26),${bgOverlay/100})`,zIndex:-1}} />
+      </>}
       <Nav page={page} setPage={setPage} user={user} c={c} />
       {toast && (
-        <div style={{position:'fixed',top:'65px',right:'16px',zIndex:999,background:'#242B3D',border:`1px solid ${toast.color}`,borderRadius:'10px',padding:'12px 16px',fontSize:'13px',fontWeight:500,display:'flex',alignItems:'center',gap:'8px',boxShadow:'0 4px 20px rgba(0,0,0,0.4)',maxWidth:'280px'}}>
+        <div style={{position:'fixed',top:'65px',right:'16px',zIndex:999,background:'var(--card2)',border:`1px solid ${toast.color}`,borderRadius:'10px',padding:'12px 16px',fontSize:'13px',fontWeight:500,display:'flex',alignItems:'center',gap:'8px',boxShadow:'0 4px 20px rgba(0,0,0,0.4)',maxWidth:'280px'}}>
           <span style={{color:toast.color,fontSize:'18px'}}>✓</span><span>{toast.msg}</span>
         </div>
       )}
@@ -120,6 +141,7 @@ export default function Home() {
     --gold2: #E8A800;
     --gold-rgb: 245,197,24;
     --dark: #0A0E1A;
+    --dark-rgb: 10,14,26;
     --dark2: #111827;
     --dark3: #1C2333;
     --text: #F0F4FF;
@@ -128,7 +150,9 @@ export default function Home() {
     --blue: #3B82F6;
     --orange: #F97316;
     --card: #1E2535;
+    --card2: #242B3D;
     --red: #E63946;
+    --red-light: #FF6B7A;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { background: var(--dark); color: var(--text); }
@@ -142,7 +166,7 @@ export default function Home() {
   .accent-gold { color: var(--gold) !important; }
   .border-gold { border-color: rgba(var(--gold-rgb),0.3) !important; }
 `}</style>
-      {page==='landing' && <LandingPage setPage={setPage} c={c} />}
+      {page==='landing' && <LandingPage setPage={setPage} c={c} bgType={bgType} />}
       {page==='registro' && <RegistroPage setPage={setPage} setUser={setUser} showToast={showToast} c={c} />}
       {page==='predicciones' && <PrediccionesPage user={user} showToast={showToast} c={c} />}
       {page==='dashboard' && <DashboardPage user={user} />}
@@ -158,7 +182,7 @@ function Nav({page,setPage,user,c}) {
   const logoUrl = c('logo_url');
   const websiteLink = c('link_website') || 'https://www.plazalasamericas.ec';
   return (
-    <nav style={{background:'rgba(10,14,26,0.97)',backdropFilter:'blur(12px)',padding:'0 12px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'56px',borderBottom:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',position:'sticky',top:0,zIndex:100}}>
+    <nav style={{background:'rgba(var(--dark-rgb,10,14,26),0.97)',backdropFilter:'blur(12px)',padding:'0 12px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'56px',borderBottom:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',position:'sticky',top:0,zIndex:100}}>
       <div style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer'}} onClick={()=>setPage('landing')}>
         <span style={{fontWeight:900,fontSize:'18px',color:'var(--gold)',textTransform:'uppercase',letterSpacing:'1px'}}>
           Reto <span style={{color:'var(--text)'}}>Mundial</span>
@@ -166,7 +190,7 @@ function Nav({page,setPage,user,c}) {
       </div>
       <div style={{display:'flex',gap:'2px',overflowX:'auto'}}>
         {tabs.map(t=>(
-          <button key={t.id} onClick={()=>setPage(t.id)} style={{background:page===t.id?'rgba(var(--gold-rgb,245,197,24),0.12)':'none',border:'none',color:page===t.id?'var(--gold)':'var(--muted,#8899BB)',fontSize:'12px',fontWeight:500,padding:'6px 10px',borderRadius:'6px',cursor:'pointer',textTransform:'uppercase',letterSpacing:'.5px',whiteSpace:'nowrap'}}>{t.label}</button>
+          <button key={t.id} onClick={()=>setPage(t.id)} style={{background:page===t.id?'rgba(var(--gold-rgb,245,197,24),0.12)':'none',border:'none',color:page===t.id?'var(--gold)':'var(--muted)',fontSize:'12px',fontWeight:500,padding:'6px 10px',borderRadius:'6px',cursor:'pointer',textTransform:'uppercase',letterSpacing:'.5px',whiteSpace:'nowrap'}}>{t.label}</button>
         ))}
       </div>
       <a href={websiteLink} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:'5px',background:'rgba(var(--gold-rgb,245,197,24),0.1)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',borderRadius:'6px',padding:'5px 10px',fontSize:'11px',fontWeight:600,color:'var(--gold)',textDecoration:'none',whiteSpace:'nowrap'}}>
@@ -190,7 +214,7 @@ function Footer({c}) {
   ].filter(l => l.url && l.url !== '#' && l.url.trim() !== '');
 
   return (
-    <footer style={{background:'rgba(10,14,26,0.97)',borderTop:'1px solid rgba(255,255,255,0.06)',padding:'24px 20px',marginTop:'40px',textAlign:'center'}}>
+    <footer style={{background:'rgba(var(--dark-rgb,10,14,26),0.97)',borderTop:'1px solid rgba(255,255,255,0.06)',padding:'24px 20px',marginTop:'40px',textAlign:'center'}}>
       {logoUrl && (
         <div style={{marginBottom:'16px'}}>
           <img src={logoUrl} alt="Plaza Las Américas" style={{height:'40px',objectFit:'contain'}} />
@@ -200,47 +224,52 @@ function Footer({c}) {
         <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:'16px',flexWrap:'wrap',marginBottom:'12px'}}>
           {links.map(l=>(
             <a key={l.label} href={l.url} target="_blank" rel="noopener"
-              style={{color: l.bold ? 'var(--gold)' : '#8899BB',textDecoration:'none',fontSize:'13px',fontWeight: l.bold ? 600 : 400}}>
+              style={{color: l.bold ? 'var(--gold)' : 'var(--muted)',textDecoration:'none',fontSize:'13px',fontWeight: l.bold ? 600 : 400}}>
               {l.label}
             </a>
           ))}
         </div>
       )}
-      <p style={{fontSize:'11px',color:'#8899BB'}}>{c('footer_copyright')}</p>
+      <p style={{fontSize:'11px',color:'var(--muted)'}}>{c('footer_copyright')}</p>
     </footer>
   );
 }
 
-function LandingPage({setPage,c}) {
+function LandingPage({setPage,c,bgType}) {
+  const heroBg = bgType === 'image'
+    ? 'rgba(var(--dark-rgb,10,14,26),0.55)'
+    : bgType === 'gradient'
+      ? 'transparent'
+      : 'linear-gradient(160deg,var(--dark) 0%,var(--dark3) 40%,var(--dark) 100%)';
   return (
     <div>
-      <div style={{background:'linear-gradient(160deg,#0A0E1A 0%,#1a1025 40%,#0d1a0a 100%)',padding:'48px 20px 64px',textAlign:'center'}}>
-        <div style={{display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(var(--gold-rgb,245,197,24),0.15)',border:'1px solid rgba(245,197,24,0.3)',borderRadius:'20px',padding:'4px 14px',fontSize:'11px',fontWeight:600,color:'var(--gold)',letterSpacing:'1px',textTransform:'uppercase',marginBottom:'20px'}}>{c('landing_badge')}</div>
+      <div style={{background:heroBg,padding:'48px 20px 64px',textAlign:'center'}}>
+        <div style={{display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(var(--gold-rgb,245,197,24),0.15)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.3)',borderRadius:'20px',padding:'4px 14px',fontSize:'11px',fontWeight:600,color:'var(--gold)',letterSpacing:'1px',textTransform:'uppercase',marginBottom:'20px'}}>{c('landing_badge')}</div>
         <h1 style={{fontWeight:900,fontSize:'clamp(40px,8vw,68px)',lineHeight:.95,letterSpacing:'-1px',textTransform:'uppercase',marginBottom:'12px'}}>
           {c('landing_title')}<br/>
           <span style={{color:'var(--gold)'}}>{c('landing_subtitle')}</span><br/>
-          <span style={{fontSize:'clamp(18px,4vw,28px)',fontWeight:600,color:'#8899BB',letterSpacing:'2px'}}>{c('landing_tagline')}</span>
+          <span style={{fontSize:'clamp(18px,4vw,28px)',fontWeight:600,color:'var(--muted)',letterSpacing:'2px'}}>{c('landing_tagline')}</span>
         </h1>
-        <p style={{fontSize:'15px',color:'#8899BB',maxWidth:'480px',margin:'0 auto 32px',lineHeight:1.6}}>{c('landing_description')}</p>
+        <p style={{fontSize:'15px',color:'var(--muted)',maxWidth:'480px',margin:'0 auto 32px',lineHeight:1.6}}>{c('landing_description')}</p>
         <div style={{display:'flex',gap:'12px',justifyContent:'center',flexWrap:'wrap'}}>
-          <button onClick={()=>setPage('registro')} style={{background:'var(--gold)',color:'#0A0E1A',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px 36px',borderRadius:'8px',cursor:'pointer'}}>{c('landing_btn_primary')}</button>
-          <button onClick={()=>setPage('predicciones')} style={{background:'transparent',color:'#F0F4FF',fontWeight:700,fontSize:'14px',letterSpacing:'1px',textTransform:'uppercase',border:'1px solid rgba(255,255,255,0.2)',padding:'12px 24px',borderRadius:'8px',cursor:'pointer'}}>{c('landing_btn_secondary')}</button>
+          <button onClick={()=>setPage('registro')} style={{background:'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px 36px',borderRadius:'8px',cursor:'pointer'}}>{c('landing_btn_primary')}</button>
+          <button onClick={()=>setPage('predicciones')} style={{background:'transparent',color:'var(--text)',fontWeight:700,fontSize:'14px',letterSpacing:'1px',textTransform:'uppercase',border:'1px solid rgba(255,255,255,0.2)',padding:'12px 24px',borderRadius:'8px',cursor:'pointer'}}>{c('landing_btn_secondary')}</button>
         </div>
       </div>
       <div style={{display:'flex',justifyContent:'center',gap:'32px',padding:'24px 20px',background:'rgba(255,255,255,0.02)',borderTop:'1px solid rgba(255,255,255,0.06)',flexWrap:'wrap'}}>
         {[[c('stat_matches'),c('stat_matches_label')],[c('stat_teams'),c('stat_teams_label')],[c('stat_free'),c('stat_free_label')],[c('stat_start'),c('stat_start_label')]].map(([n,l])=>(
           <div key={l} style={{textAlign:'center'}}>
             <div style={{fontWeight:800,fontSize:'28px',color:'var(--gold)',lineHeight:1}}>{n}</div>
-            <div style={{fontSize:'11px',color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px',marginTop:'2px'}}>{l}</div>
+            <div style={{fontSize:'11px',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginTop:'2px'}}>{l}</div>
           </div>
         ))}
       </div>
       <div style={{padding:'32px 20px'}}>
         <h2 style={{fontWeight:800,fontSize:'22px',letterSpacing:'1px',textTransform:'uppercase',marginBottom:'4px'}}>Sistema de <span style={{color:'var(--gold)'}}>Puntos</span></h2>
-        <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'16px'}}>Máximo 5 puntos por partido</p>
+        <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'16px'}}>Máximo 5 puntos por partido</p>
         <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-          {[['⚡ Marcador exacto','5 pts','#F5C518'],['✅ Ganador o empate','3 pts','#3B82F6'],['📊 Diferencia de goles','2 pts','#F97316'],['🎯 Goles de un equipo','1 pt','#8899BB']].map(([label,pts,color])=>(
-            <div key={label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#1E2535',borderRadius:'8px',padding:'12px 16px',border:'1px solid rgba(255,255,255,0.06)'}}>
+          {[['⚡ Marcador exacto','5 pts','var(--gold)'],['✅ Ganador o empate','3 pts','var(--blue)'],['📊 Diferencia de goles','2 pts','var(--orange)'],['🎯 Goles de un equipo','1 pt','var(--muted)']].map(([label,pts,color])=>(
+            <div key={label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'var(--card)',borderRadius:'8px',padding:'12px 16px',border:'1px solid rgba(255,255,255,0.06)'}}>
               <span style={{fontSize:'14px'}}>{label}</span>
               <span style={{fontWeight:800,fontSize:'20px',color}}>{pts}</span>
             </div>
@@ -268,7 +297,7 @@ function RegistroPage({setPage,setUser,showToast,c}) {
       if (err){setError(err.message);setLoading(false);return;}
       await supabase.from('leaderboard').insert([{user_id:data.id}]);
       setUser(data);
-      showToast('¡Registro exitoso! Ahora haz tus predicciones','#22C55E');
+      showToast('¡Registro exitoso! Ahora haz tus predicciones','var(--green)');
       setPage('predicciones');
     } catch(e){setError('Error al registrar. Intenta de nuevo.');}
     setLoading(false);
@@ -277,27 +306,27 @@ function RegistroPage({setPage,setUser,showToast,c}) {
   return (
     <div style={{padding:'24px 20px',maxWidth:'600px',margin:'0 auto'}}>
       <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Registro <span style={{color:'var(--gold)'}}>Gratuito</span></h2>
-      <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'20px'}}>Únete al Reto Mundialista Plaza Las Américas 2026</p>
-      <div style={{background:'#1E2535',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'12px',padding:'20px'}}>
+      <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'20px'}}>Únete al Reto Mundialista Plaza Las Américas 2026</p>
+      <div style={{background:'var(--card)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'12px',padding:'20px'}}>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
-          {[['Nombre completo','full_name','text','Tu nombre completo'],['Cédula / Pasaporte','cedula','text','0123456789'],['Celular','phone','tel','0991234567'],['Email','email','email','correo@ejemplo.com'],['Ciudad','city','text','Guayaquil'],['Fecha de nacimiento','birth_date','date','']].map(([label,key,type,ph])=>(
+          {[['Nombre completo','full_name','text','Tu nombre completo'],['Cédula / Pasaporte','cedula','text','0123456789'],['Celular','phone','tel','0991234567'],['Email','email','email','correo@ejemplo.com'],['Ciudad','city','text','Quito'],['Fecha de nacimiento','birth_date','date','']].map(([label,key,type,ph])=>(
             <div key={key}>
-              <label style={{fontSize:'11px',fontWeight:600,color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px',display:'block',marginBottom:'5px'}}>{label}</label>
+              <label style={{fontSize:'11px',fontWeight:600,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',display:'block',marginBottom:'5px'}}>{label}</label>
               <input type={type} placeholder={ph} value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})}
-                style={{width:'100%',background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'8px',padding:'10px 12px',color:'#F0F4FF',fontSize:'14px'}} />
+                style={{width:'100%',background:'var(--dark)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'8px',padding:'10px 12px',color:'var(--text)',fontSize:'14px'}} />
             </div>
           ))}
         </div>
         <div style={{marginTop:'14px',display:'flex',flexDirection:'column',gap:'10px'}}>
-          {[['accepts_terms',`Acepto los <a href="${c('link_terms')||'#'}" style="color:#F5C518">términos y condiciones</a> del Reto Mundialista Plaza Las Américas`],['accepts_marketing','Acepto recibir comunicaciones comerciales y promociones de Plaza Las Américas']].map(([key,label])=>(
+          {[['accepts_terms',`Acepto los <a href="${c('link_terms')||'#'}" style="color:var(--gold)">términos y condiciones</a> del Reto Mundialista Plaza Las Américas`],['accepts_marketing','Acepto recibir comunicaciones comerciales y promociones de Plaza Las Américas']].map(([key,label])=>(
             <label key={key} style={{display:'flex',alignItems:'flex-start',gap:'10px',cursor:'pointer'}}>
-              <input type="checkbox" checked={form[key]} onChange={e=>setForm({...form,[key]:e.target.checked})} style={{marginTop:'2px',accentColor:'#F5C518',width:'16px',height:'16px',flexShrink:0}} />
-              <span style={{fontSize:'12px',color:'#8899BB',lineHeight:1.5}} dangerouslySetInnerHTML={{__html:label}} />
+              <input type="checkbox" checked={form[key]} onChange={e=>setForm({...form,[key]:e.target.checked})} style={{marginTop:'2px',accentColor:'var(--gold)',width:'16px',height:'16px',flexShrink:0}} />
+              <span style={{fontSize:'12px',color:'var(--muted)',lineHeight:1.5}} dangerouslySetInnerHTML={{__html:label}} />
             </label>
           ))}
         </div>
-        {error && <div style={{marginTop:'12px',background:'rgba(230,57,70,0.1)',border:'1px solid rgba(230,57,70,0.3)',borderRadius:'8px',padding:'10px 12px',fontSize:'13px',color:'#FF6B7A'}}>{error}</div>}
-        <button onClick={handleSubmit} disabled={loading} style={{width:'100%',marginTop:'18px',background:loading?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px',borderRadius:'8px',cursor:loading?'not-allowed':'pointer'}}>
+        {error && <div style={{marginTop:'12px',background:'rgba(230,57,70,0.1)',border:'1px solid rgba(230,57,70,0.3)',borderRadius:'8px',padding:'10px 12px',fontSize:'13px',color:'var(--red-light)'}}>{error}</div>}
+        <button onClick={handleSubmit} disabled={loading} style={{width:'100%',marginTop:'18px',background:loading?'var(--muted)':'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px',borderRadius:'8px',cursor:loading?'not-allowed':'pointer'}}>
           {loading?'Registrando...':'Registrarme y hacer mis predicciones →'}
         </button>
       </div>
@@ -412,15 +441,15 @@ function PrediccionesPage({user,showToast,c}) {
   },[bracket,originalBracket,matches]);
 
   const savePredictions = async () => {
-    if (!user){showToast('Regístrate primero para guardar tus predicciones','#FF6B7A');return;}
+    if (!user){showToast('Regístrate primero para guardar tus predicciones','var(--red-light)');return;}
     const missing=filtered.filter(m=>scores[m.id+'_a']===undefined||scores[m.id+'_a']===''||scores[m.id+'_b']===undefined||scores[m.id+'_b']==='');
-    if (missing.length>0){showToast(`❌ Faltan ${missing.length} partido(s) sin predicción en esta fase. Completa todos antes de guardar.`,'#FF6B7A');return;}
+    if (missing.length>0){showToast(`❌ Faltan ${missing.length} partido(s) sin predicción en esta fase. Completa todos antes de guardar.`,'var(--red-light)');return;}
     if (phase!=='grupos') {
       const sinDesempate=filtered.filter(m=>{
         const sa=scores[m.id+'_a'], sb=scores[m.id+'_b'];
         return sa!==undefined&&sa!==''&&sb!==undefined&&sb!==''&&sa===sb&&!tiebreakers[m.id];
       });
-      if (sinDesempate.length>0){showToast(`❌ Hay ${sinDesempate.length} partido(s) empatado(s) sin definir ganador en penales.`,'#FF6B7A');return;}
+      if (sinDesempate.length>0){showToast(`❌ Hay ${sinDesempate.length} partido(s) empatado(s) sin definir ganador en penales.`,'var(--red-light)');return;}
     }
     setSaving(true);
     const rows=filtered.map(m=>({
@@ -428,12 +457,11 @@ function PrediccionesPage({user,showToast,c}) {
       predicted_score_a:parseInt(scores[m.id+'_a']??0),
       predicted_score_b:parseInt(scores[m.id+'_b']??0),
       tiebreaker:tiebreakers[m.id]||null,
-      // En eliminatorias guardamos los equipos que el usuario predijo que jugarían
       predicted_team_a: phase!=='grupos' ? getTeam(m.team_a) : null,
       predicted_team_b: phase!=='grupos' ? getTeam(m.team_b) : null,
     }));
     const {error}=await supabase.from('predictions').upsert(rows,{onConflict:'user_id,match_id'});
-    if (error){showToast('No se pudieron guardar. Intenta de nuevo.','#FF6B7A');setSaving(false);return;}
+    if (error){showToast('No se pudieron guardar. Intenta de nuevo.','var(--red-light)');setSaving(false);return;}
     const faltantes=phases.filter(p=>{
       const pm=matches.filter(m=>m.phase===p);
       if(!pm.length)return false;
@@ -441,9 +469,9 @@ function PrediccionesPage({user,showToast,c}) {
     }).filter(p=>p!==phase).map(p=>PHASE_LABELS[p]);
     setOriginalBracket(computeBracket(matches, scores, tiebreakers));
     if(faltantes.length>0){
-      showToast(`✅ ${PHASE_LABELS[phase]} guardada. Faltan por completar: ${faltantes.join(', ')}`, '#F5C518');
+      showToast(`✅ ${PHASE_LABELS[phase]} guardada. Faltan por completar: ${faltantes.join(', ')}`, 'var(--gold)');
     } else {
-      showToast(`✅ ¡Todas las fases completas! ${rows.length} predicciones guardadas.`,'#22C55E');
+      showToast(`✅ ¡Todas las fases completas! ${rows.length} predicciones guardadas.`,'var(--green)');
     }
     setSaving(false);
   };
@@ -451,9 +479,9 @@ function PrediccionesPage({user,showToast,c}) {
   return (
     <div style={{padding:'20px',maxWidth:'900px',margin:'0 auto'}}>
       <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Mis <span style={{color:'var(--gold)'}}>Predicciones</span></h2>
-      <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'14px'}}>Llena todas las fases antes del 10 de junio · Los equipos de eliminatorias se calculan según tus predicciones de grupos</p>
+      <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'14px'}}>Llena todas las fases antes del 10 de junio · Los equipos de eliminatorias se calculan según tus predicciones de grupos</p>
       {affectedPhases.length>0&&(
-        <div style={{background:'rgba(249,115,22,0.1)',border:'1px solid rgba(249,115,22,0.35)',borderRadius:'8px',padding:'10px 14px',marginBottom:'12px',fontSize:'12px',color:'#FCA44A'}}>
+        <div style={{background:'rgba(249,115,22,0.1)',border:'1px solid rgba(249,115,22,0.35)',borderRadius:'8px',padding:'10px 14px',marginBottom:'12px',fontSize:'12px',color:'var(--orange)'}}>
           ⚠️ Modificaste predicciones que cambian los equipos clasificados. Las siguientes fases tienen partidos afectados y deben revisarse: <strong>{affectedPhases.join(', ')}</strong>. Guarda cada fase afectada para confirmar los cambios.
         </div>
       )}
@@ -463,19 +491,19 @@ function PrediccionesPage({user,showToast,c}) {
           const filled=pm.filter(m=>scores[m.id+'_a']!==undefined&&scores[m.id+'_a']!=='').length;
           const complete=pm.length>0&&filled===pm.length;
           return (
-            <button key={p} onClick={()=>setPhase(p)} style={{background:phase===p?'rgba(245,197,24,0.15)':'#1C2333',border:`1px solid ${phase===p?'rgba(245,197,24,0.3)':'rgba(255,255,255,0.08)'}`,borderRadius:'6px',padding:'6px 12px',fontSize:'11px',fontWeight:600,color:phase===p?'#F5C518':complete?'#22C55E':'#8899BB',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,textTransform:'uppercase',letterSpacing:'.5px'}}>
+            <button key={p} onClick={()=>setPhase(p)} style={{background:phase===p?'rgba(var(--gold-rgb,245,197,24),0.15)':'var(--dark3)',border:`1px solid ${phase===p?'rgba(var(--gold-rgb,245,197,24),0.3)':'rgba(255,255,255,0.08)'}`,borderRadius:'6px',padding:'6px 12px',fontSize:'11px',fontWeight:600,color:phase===p?'var(--gold)':complete?'var(--green)':'var(--muted)',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,textTransform:'uppercase',letterSpacing:'.5px'}}>
               {complete?'✅ ':''}{PHASE_LABELS[p]}
             </button>
           );
         })}
       </div>
       {phase !== 'grupos' && (
-        <div style={{background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.25)',borderRadius:'8px',padding:'10px 14px',marginBottom:'12px',fontSize:'12px',color:'#93C5FD'}}>
+        <div style={{background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.25)',borderRadius:'8px',padding:'10px 14px',marginBottom:'12px',fontSize:'12px',color:'var(--blue)'}}>
           ℹ️ Los equipos de esta fase se calculan automáticamente según tus predicciones de la <strong>{PHASE_PREV[phase]}</strong>. Completa las fases en orden y guarda cada una.
         </div>
       )}
       {loading?(
-        <div style={{textAlign:'center',padding:'40px',color:'#8899BB'}}>Cargando partidos...</div>
+        <div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>Cargando partidos...</div>
       ):(
         <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
           {filtered.map(m=>{
@@ -487,37 +515,37 @@ function PrediccionesPage({user,showToast,c}) {
             const tb=tiebreakers[m.id];
             const needsTb=isKnockout&&isDraw&&!tb;
             return (
-              <div key={m.id} style={{background:'#1E2535',border:`1px solid ${(!hasA||!hasB||needsTb)?'rgba(255,107,122,0.35)':'rgba(255,255,255,0.07)'}`,borderRadius:'10px',padding:'12px 14px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
-                <span style={{background:PHASE_COLORS[m.phase]||'rgba(245,197,24,0.1)',border:`1px solid ${PHASE_TEXT[m.phase]||'#F5C518'}40`,borderRadius:'4px',padding:'2px 7px',fontSize:'10px',fontWeight:600,color:PHASE_TEXT[m.phase]||'#F5C518',whiteSpace:'nowrap'}}>
+              <div key={m.id} style={{background:'var(--card)',border:`1px solid ${(!hasA||!hasB||needsTb)?'rgba(255,107,122,0.35)':'rgba(255,255,255,0.07)'}`,borderRadius:'10px',padding:'12px 14px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
+                <span style={{background:PHASE_COLORS[m.phase]||'rgba(245,197,24,0.1)',border:`1px solid ${PHASE_TEXT[m.phase]||'var(--gold)'}40`,borderRadius:'4px',padding:'2px 7px',fontSize:'10px',fontWeight:600,color:PHASE_TEXT[m.phase]||'var(--gold)',whiteSpace:'nowrap'}}>
                   {m.group_name||PHASE_LABELS[m.phase]}
                 </span>
                 <div style={{flex:1,display:'flex',alignItems:'center',gap:'6px',minWidth:'140px'}}>
                   <FlagImg code={m.team_a_code} name={teamA} />
                   <span style={{fontWeight:700,fontSize:'13px'}}>{teamA}</span>
-                  <span style={{color:'#8899BB',fontSize:'11px'}}>vs</span>
+                  <span style={{color:'var(--muted)',fontSize:'11px'}}>vs</span>
                   <FlagImg code={m.team_b_code} name={teamB} />
                   <span style={{fontWeight:700,fontSize:'13px'}}>{teamB}</span>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
                   <input type="number" min="0" max="20" placeholder="?" value={scores[m.id+'_a']??''} onChange={e=>setScores(prev=>({...prev,[m.id+'_a']:e.target.value}))}
-                    style={{width:'36px',height:'36px',background:'#1C2333',border:`1px solid ${hasA?'rgba(255,255,255,0.12)':'rgba(255,107,122,0.5)'}`,borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center'}} />
-                  <span style={{color:'#8899BB',fontWeight:700}}>-</span>
+                    style={{width:'36px',height:'36px',background:'var(--dark3)',border:`1px solid ${hasA?'rgba(255,255,255,0.12)':'rgba(255,107,122,0.5)'}`,borderRadius:'6px',color:'var(--text)',fontWeight:700,fontSize:'16px',textAlign:'center'}} />
+                  <span style={{color:'var(--muted)',fontWeight:700}}>-</span>
                   <input type="number" min="0" max="20" placeholder="?" value={scores[m.id+'_b']??''} onChange={e=>setScores(prev=>({...prev,[m.id+'_b']:e.target.value}))}
-                    style={{width:'36px',height:'36px',background:'#1C2333',border:`1px solid ${hasB?'rgba(255,255,255,0.12)':'rgba(255,107,122,0.5)'}`,borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center'}} />
+                    style={{width:'36px',height:'36px',background:'var(--dark3)',border:`1px solid ${hasB?'rgba(255,255,255,0.12)':'rgba(255,107,122,0.5)'}`,borderRadius:'6px',color:'var(--text)',fontWeight:700,fontSize:'16px',textAlign:'center'}} />
                 </div>
-                <div style={{fontSize:'11px',color:'#8899BB',textAlign:'right',minWidth:'65px'}}>
+                <div style={{fontSize:'11px',color:'var(--muted)',textAlign:'right',minWidth:'65px'}}>
                   <div>{new Date(m.scheduled_at).toLocaleDateString('es-EC',{month:'short',day:'numeric',timeZone:'America/Guayaquil'})}</div>
                   <div>{new Date(m.scheduled_at).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',timeZone:'America/Guayaquil',hour12:true})}</div>
                 </div>
                 {isKnockout&&isDraw&&(
                   <div style={{width:'100%',display:'flex',alignItems:'center',gap:'8px',marginTop:'4px',paddingTop:'8px',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-                    <span style={{fontSize:'11px',color:'#F97316',whiteSpace:'nowrap'}}>⚽ Empate — ganador en penales:</span>
+                    <span style={{fontSize:'11px',color:'var(--orange)',whiteSpace:'nowrap'}}>⚽ Empate — ganador en penales:</span>
                     <button onClick={()=>setTiebreakers(prev=>({...prev,[m.id]:'a'}))}
-                      style={{flex:1,padding:'5px 8px',borderRadius:'6px',border:`1px solid ${tb==='a'?'#22C55E':'rgba(255,255,255,0.1)'}`,background:tb==='a'?'rgba(34,197,94,0.15)':'#1C2333',color:tb==='a'?'#22C55E':'#8899BB',fontSize:'11px',fontWeight:700,cursor:'pointer'}}>
+                      style={{flex:1,padding:'5px 8px',borderRadius:'6px',border:`1px solid ${tb==='a'?'var(--green)':'rgba(255,255,255,0.1)'}`,background:tb==='a'?'rgba(34,197,94,0.15)':'var(--dark3)',color:tb==='a'?'var(--green)':'var(--muted)',fontSize:'11px',fontWeight:700,cursor:'pointer'}}>
                       {teamA}
                     </button>
                     <button onClick={()=>setTiebreakers(prev=>({...prev,[m.id]:'b'}))}
-                      style={{flex:1,padding:'5px 8px',borderRadius:'6px',border:`1px solid ${tb==='b'?'#22C55E':'rgba(255,255,255,0.1)'}`,background:tb==='b'?'rgba(34,197,94,0.15)':'#1C2333',color:tb==='b'?'#22C55E':'#8899BB',fontSize:'11px',fontWeight:700,cursor:'pointer'}}>
+                      style={{flex:1,padding:'5px 8px',borderRadius:'6px',border:`1px solid ${tb==='b'?'var(--green)':'rgba(255,255,255,0.1)'}`,background:tb==='b'?'rgba(34,197,94,0.15)':'var(--dark3)',color:tb==='b'?'var(--green)':'var(--muted)',fontSize:'11px',fontWeight:700,cursor:'pointer'}}>
                       {teamB}
                     </button>
                   </div>
@@ -525,13 +553,13 @@ function PrediccionesPage({user,showToast,c}) {
               </div>
             );
           })}
-          {filtered.length===0&&<div style={{textAlign:'center',padding:'40px',color:'#8899BB'}}>No hay partidos en esta fase aún</div>}
+          {filtered.length===0&&<div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>No hay partidos en esta fase aún</div>}
         </div>
       )}
-      <button onClick={savePredictions} disabled={saving} style={{width:'100%',marginTop:'16px',background:saving?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px',borderRadius:'8px',cursor:saving?'not-allowed':'pointer'}}>
+      <button onClick={savePredictions} disabled={saving} style={{width:'100%',marginTop:'16px',background:saving?'var(--muted)':'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px',borderRadius:'8px',cursor:saving?'not-allowed':'pointer'}}>
         {saving?'Guardando...':'💾 Guardar Predicciones'}
       </button>
-      <p style={{textAlign:'center',fontSize:'11px',color:'#8899BB',marginTop:'8px'}}>{c('predictions_lock_notice')}</p>
+      <p style={{textAlign:'center',fontSize:'11px',color:'var(--muted)',marginTop:'8px'}}>{c('predictions_lock_notice')}</p>
     </div>
   );
 }
@@ -547,31 +575,31 @@ function DashboardPage({user}) {
     <div style={{padding:'60px 20px',textAlign:'center'}}>
       <div style={{fontSize:'48px',marginBottom:'16px'}}>👤</div>
       <h2 style={{fontWeight:800,fontSize:'24px',color:'var(--gold)',marginBottom:'8px'}}>REGÍSTRATE PRIMERO</h2>
-      <p style={{color:'#8899BB'}}>Necesitas una cuenta para ver tu dashboard</p>
+      <p style={{color:'var(--muted)'}}>Necesitas una cuenta para ver tu dashboard</p>
     </div>
   );
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'600px',margin:'0 auto'}}>
       <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}>Mi <span style={{color:'var(--gold)'}}>Dashboard</span></h2>
-      <div style={{background:'#1C2333',border:'1px solid rgba(245,197,24,0.15)',borderRadius:'14px',padding:'20px',marginBottom:'16px'}}>
+      <div style={{background:'var(--dark3)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.15)',borderRadius:'14px',padding:'20px',marginBottom:'16px'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
           <div>
-            <div style={{fontSize:'12px',color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px'}}>Posición Global</div>
+            <div style={{fontSize:'12px',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px'}}>Posición Global</div>
             <div style={{fontWeight:900,fontSize:'42px',color:'var(--gold)',lineHeight:1}}>#{stats?.global_rank||'—'}</div>
           </div>
           <div style={{textAlign:'right'}}>
-            <div style={{fontSize:'12px',color:'#8899BB'}}>Puntos</div>
-            <div style={{fontWeight:900,fontSize:'52px',color:'#F0F4FF',lineHeight:1}}>{stats?.total_points||0}</div>
+            <div style={{fontSize:'12px',color:'var(--muted)'}}>Puntos</div>
+            <div style={{fontWeight:900,fontSize:'52px',color:'var(--text)',lineHeight:1}}>{stats?.total_points||0}</div>
           </div>
         </div>
-        <div style={{marginTop:'12px',fontSize:'13px',color:'#8899BB'}}>Bienvenido, <strong style={{color:'var(--gold)'}}>{user.full_name}</strong></div>
+        <div style={{marginTop:'12px',fontSize:'13px',color:'var(--muted)'}}>Bienvenido, <strong style={{color:'var(--gold)'}}>{user.full_name}</strong></div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
-        {[['Exactos','exact_scores','#F5C518'],['Acertados','correct_results','#22C55E'],['Predicciones','total_predictions','#3B82F6'],['% Aciertos','accuracy_pct','#F97316']].map(([l,k,col])=>(
-          <div key={k} style={{background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'8px',padding:'12px',textAlign:'center'}}>
+        {[['Exactos','exact_scores','var(--gold)'],['Acertados','correct_results','var(--green)'],['Predicciones','total_predictions','var(--blue)'],['% Aciertos','accuracy_pct','var(--orange)']].map(([l,k,col])=>(
+          <div key={k} style={{background:'var(--dark)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'8px',padding:'12px',textAlign:'center'}}>
             <div style={{fontWeight:800,fontSize:'24px',color:col}}>{stats?.[k]??'0'}{k==='accuracy_pct'?'%':''}</div>
-            <div style={{fontSize:'11px',color:'#8899BB',marginTop:'2px'}}>{l}</div>
+            <div style={{fontSize:'11px',color:'var(--muted)',marginTop:'2px'}}>{l}</div>
           </div>
         ))}
       </div>
@@ -589,17 +617,17 @@ function RankingPage() {
   return (
     <div style={{padding:'24px 20px',maxWidth:'700px',margin:'0 auto'}}>
       <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}>Ranking <span style={{color:'var(--gold)'}}>Global</span></h2>
-      {loading?<div style={{textAlign:'center',padding:'40px',color:'#8899BB'}}>Cargando ranking...</div>:(
+      {loading?<div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>Cargando ranking...</div>:(
         <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
-          {ranking.length===0&&<div style={{textAlign:'center',padding:'40px',color:'#8899BB'}}>El ranking se activará cuando comiencen los partidos</div>}
+          {ranking.length===0&&<div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>El ranking se activará cuando comiencen los partidos</div>}
           {ranking.map((r,i)=>(
-            <div key={r.user_id} style={{display:'flex',alignItems:'center',gap:'12px',background:'#1E2535',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'8px',padding:'10px 14px'}}>
-              <span style={{fontWeight:800,fontSize:'20px',color:i<3?'#F5C518':'#8899BB',width:'28px',textAlign:'center',flexShrink:0}}>{r.global_rank}</span>
+            <div key={r.user_id} style={{display:'flex',alignItems:'center',gap:'12px',background:'var(--card)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'8px',padding:'10px 14px'}}>
+              <span style={{fontWeight:800,fontSize:'20px',color:i<3?'var(--gold)':'var(--muted)',width:'28px',textAlign:'center',flexShrink:0}}>{r.global_rank}</span>
               <div style={{flex:1}}>
                 <div style={{fontSize:'14px',fontWeight:500}}>{r.full_name}</div>
-                <div style={{fontSize:'11px',color:'#8899BB'}}>{r.city}</div>
+                <div style={{fontSize:'11px',color:'var(--muted)'}}>{r.city}</div>
               </div>
-              <span style={{fontSize:'11px',fontWeight:600,color:r.rank_change>0?'#22C55E':r.rank_change<0?'#E63946':'#8899BB'}}>
+              <span style={{fontSize:'11px',fontWeight:600,color:r.rank_change>0?'var(--green)':r.rank_change<0?'var(--red)':'var(--muted)'}}>
                 {r.rank_change>0?`▲${r.rank_change}`:r.rank_change<0?`▼${Math.abs(r.rank_change)}`:'—'}
               </span>
               <span style={{fontWeight:700,fontSize:'18px',color:'var(--gold)'}}>{r.total_points}</span>
@@ -623,17 +651,17 @@ function PromosPage({c}) {
   return (
     <div style={{padding:'24px 20px',maxWidth:'900px',margin:'0 auto'}}>
       <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Plaza Las <span style={{color:'var(--gold)'}}>Américas</span></h2>
-      <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'16px'}}>Promociones mundialistas exclusivas para participantes</p>
-      <div style={{background:'linear-gradient(135deg,rgba(245,197,24,0.08),rgba(249,115,22,0.05))',border:'1px solid rgba(245,197,24,0.2)',borderRadius:'12px',padding:'16px',marginBottom:'16px',textAlign:'center'}}>
+      <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'16px'}}>Promociones mundialistas exclusivas para participantes</p>
+      <div style={{background:'linear-gradient(135deg,rgba(var(--gold-rgb,245,197,24),0.08),rgba(249,115,22,0.05))',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',borderRadius:'12px',padding:'16px',marginBottom:'16px',textAlign:'center'}}>
         <div style={{fontSize:'11px',color:'var(--gold)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>🎉 Evento especial</div>
         <div style={{fontWeight:800,fontSize:'18px',marginBottom:'4px'}}>{c('event_title')}</div>
-        <div style={{fontSize:'12px',color:'#8899BB'}}>{c('event_description')}</div>
-        <div style={{marginTop:'8px',display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(34,197,94,0.12)',borderRadius:'6px',padding:'4px 12px',fontSize:'12px',color:'#22C55E',fontWeight:600}}>{c('event_schedule')}</div>
+        <div style={{fontSize:'12px',color:'var(--muted)'}}>{c('event_description')}</div>
+        <div style={{marginTop:'8px',display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(34,197,94,0.12)',borderRadius:'6px',padding:'4px 12px',fontSize:'12px',color:'var(--green)',fontWeight:600}}>{c('event_schedule')}</div>
       </div>
-      {loading?<div style={{textAlign:'center',padding:'20px',color:'#8899BB'}}>Cargando promociones...</div>:(
+      {loading?<div style={{textAlign:'center',padding:'20px',color:'var(--muted)'}}>Cargando promociones...</div>:(
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:'10px'}}>
           {promos.map(p=>(
-            <div key={p.id} style={{background:'#1E2535',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'10px',overflow:'hidden',cursor:'pointer',transition:'transform .2s'}}
+            <div key={p.id} style={{background:'var(--card)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'10px',overflow:'hidden',cursor:'pointer',transition:'transform .2s'}}
               onMouseOver={e=>e.currentTarget.style.transform='translateY(-2px)'}
               onMouseOut={e=>e.currentTarget.style.transform='translateY(0)'}>
               {p.image_url ? (
@@ -644,7 +672,7 @@ function PromosPage({c}) {
               <div style={{padding:'10px'}}>
                 <div style={{fontSize:'10px',color:'var(--gold)',fontWeight:600,textTransform:'uppercase'}}>{p.store_name}</div>
                 <div style={{fontSize:'13px',fontWeight:600,marginTop:'2px'}}>{p.title}</div>
-                <div style={{fontSize:'11px',color:'#8899BB',marginTop:'3px'}}>{p.description}</div>
+                <div style={{fontSize:'11px',color:'var(--muted)',marginTop:'3px'}}>{p.description}</div>
               </div>
             </div>
           ))}

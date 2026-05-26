@@ -1,7 +1,7 @@
 # CLAUDE.md — Reto Mundialista · Plaza Las Américas 2026
 
 ## Project Overview
-A web app for **Plaza Las Américas** (shopping mall in Guayaquil, Ecuador) where users predict FIFA World Cup 2026 match scores to win prizes. Free to participate, no gambling.
+A web app for **Plaza Las Américas** (shopping mall in Quito, Ecuador) where users predict FIFA World Cup 2026 match scores to win prizes. Free to participate, no gambling.
 
 **Live URL:** https://reto.plazalasamericas.ec
 **Admin panel:** https://reto.plazalasamericas.ec/admin
@@ -132,6 +132,10 @@ stat_matches, stat_teams (should be 48), stat_free, stat_start
 event_title, event_description, event_schedule
 predictions_lock_notice
 color_primary, color_background, color_text
+color_card, color_muted
+background_type ← 'solid' | 'gradient' | 'image'
+background_value ← CSS gradient string or image URL
+background_overlay ← 0-90 (overlay darkness % for image mode)
 link_website, link_instagram, link_whatsapp, link_terms
 logo_url  ← Plaza logo (Imgur URL)
 ```

@@ -18,6 +18,7 @@ const DEFAULT_CONTENT = {
   event_title:'ZONA MUNDIAL · Plaza Las Américas',event_description:'Pantallas gigantes · Activaciones · Sorteos en vivo',
   event_schedule:'📅 Todos los días del Mundial · 16h00 - 22h00',
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
+  background_type:'solid',background_value:'',background_overlay:'50',
   link_terms:'',link_instagram:'',link_whatsapp:'',link_website:'https://www.plazalasamericas.ec',
   logo_url:'',
   footer_link_website_label:'🌐 Plaza Las Américas',
@@ -201,9 +202,84 @@ export default function AdminPage() {
               <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>El color anaranjado de Plaza Las Américas es <strong style={{color:'#E8611A'}}>#E8611A</strong>. Haz clic en el cuadro de color o escribe el código hexadecimal.</p>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'10px'}}>
                 <CF label="Color primario (dorado/anaranjado)" val={s('color_primary')} set={v=>set('color_primary',v)} />
-                <CF label="Color de fondo" val={s('color_background')} set={v=>set('color_background',v)} />
+                <CF label="Color de fondo (base sólida)" val={s('color_background')} set={v=>set('color_background',v)} />
                 <CF label="Color de texto" val={s('color_text')} set={v=>set('color_text',v)} />
               </div>
+            </Sec>
+            <Sec title="🖼️ Fondo de la App">
+              <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>
+                Elige cómo se ve el fondo de toda la aplicación. <strong style={{color:'#F0F4FF'}}>Sólido</strong> usa el color de fondo de arriba. <strong style={{color:'#F0F4FF'}}>Degradé</strong> acepta cualquier CSS gradient. <strong style={{color:'#F0F4FF'}}>Imagen</strong> pone una foto de fondo con overlay.
+              </p>
+              <div style={{display:'flex',gap:'6px',marginBottom:'14px'}}>
+                {[['solid','🎨 Sólido'],['gradient','🌈 Degradé'],['image','🖼️ Imagen']].map(([val,label])=>(
+                  <button key={val} onClick={()=>set('background_type',val)}
+                    style={{flex:1,padding:'8px',borderRadius:'6px',border:`1px solid ${s('background_type')===val?'rgba(245,197,24,0.5)':'rgba(255,255,255,0.1)'}`,background:s('background_type')===val?'rgba(245,197,24,0.12)':'#0A0E1A',color:s('background_type')===val?'#F5C518':'#8899BB',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {s('background_type')==='solid' && (
+                <p style={{fontSize:'12px',color:'#8899BB'}}>
+                  El fondo usa el <strong style={{color:'#F0F4FF'}}>"Color de fondo (base sólida)"</strong> definido en la sección de Colores arriba.
+                </p>
+              )}
+              {s('background_type')==='gradient' && (
+                <div>
+                  <F label="CSS del degradé (ej: linear-gradient(135deg, #0A0E1A, #1a0d25))" val={s('background_value')} set={v=>set('background_value',v)} />
+                  <p style={{fontSize:'11px',color:'#8899BB',marginBottom:'8px'}}>Presets:</p>
+                  <div style={{display:'flex',gap:'6px',flexWrap:'wrap',marginBottom:'12px'}}>
+                    {[
+                      ['Oscuro clásico','linear-gradient(160deg, #0A0E1A 0%, #1C2333 40%, #0A0E1A 100%)'],
+                      ['Azul medianoche','linear-gradient(135deg, #0A0E1A 0%, #0d1b2a 100%)'],
+                      ['Verde fútbol','linear-gradient(160deg, #0a1a0a 0%, #0d2010 50%, #0A0E1A 100%)'],
+                      ['Púrpura','linear-gradient(160deg, #0A0E1A 0%, #1a0d25 50%, #0A0E1A 100%)'],
+                      ['Plaza naranja','linear-gradient(160deg, #1a0d05 0%, #0A0E1A 50%, #1a0d05 100%)'],
+                    ].map(([name,val])=>(
+                      <button key={name} onClick={()=>set('background_value',val)}
+                        style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'11px',padding:'5px 10px',borderRadius:'4px',cursor:'pointer'}}>
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                  {s('background_value') && (
+                    <div>
+                      <p style={{fontSize:'11px',color:'#8899BB',marginBottom:'4px'}}>Vista previa:</p>
+                      <div style={{height:'60px',borderRadius:'8px',background:s('background_value'),border:'1px solid rgba(255,255,255,0.1)'}} />
+                    </div>
+                  )}
+                </div>
+              )}
+              {s('background_type')==='image' && (
+                <div>
+                  <F label="URL de la imagen de fondo" val={s('background_value')} set={v=>set('background_value',v)} />
+                  <p style={{fontSize:'11px',color:'#8899BB',marginBottom:'12px'}}>
+                    💡 Sube tu imagen a <a href="https://imgur.com/upload" target="_blank" rel="noopener" style={{color:'#F5C518'}}>imgur.com</a> y pega el link directo. Recomendado: 1920×1080px o más.
+                  </p>
+                  <div style={{marginBottom:'12px'}}>
+                    <label style={{fontSize:'11px',fontWeight:600,color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px',display:'block',marginBottom:'6px'}}>
+                      Oscuridad del overlay: {s('background_overlay')||'50'}%
+                    </label>
+                    <input type="range" min="0" max="90" value={parseInt(s('background_overlay')||'50')} onChange={e=>set('background_overlay',e.target.value)}
+                      style={{width:'100%',accentColor:'#F5C518'}} />
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:'10px',color:'#8899BB',marginTop:'2px'}}>
+                      <span>Transparente (0%)</span><span>Muy oscuro (90%)</span>
+                    </div>
+                  </div>
+                  {s('background_value') && (
+                    <div>
+                      <p style={{fontSize:'11px',color:'#8899BB',marginBottom:'4px'}}>Vista previa:</p>
+                      <div style={{height:'90px',borderRadius:'8px',overflow:'hidden',position:'relative',border:'1px solid rgba(255,255,255,0.1)'}}>
+                        <div style={{position:'absolute',inset:0,backgroundImage:`url(${s('background_value')})`,backgroundSize:'cover',backgroundPosition:'center'}}
+                          onError={()=>{}} />
+                        <div style={{position:'absolute',inset:0,background:`rgba(10,14,26,${(parseInt(s('background_overlay')||'50'))/100})`}} />
+                        <div style={{position:'relative',zIndex:1,display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'#F0F4FF',fontSize:'13px',fontWeight:600,textShadow:'0 1px 4px rgba(0,0,0,0.8)'}}>
+                          Vista previa con overlay {s('background_overlay')||'50'}%
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </Sec>
             <button onClick={saveContent} disabled={saving} style={{width:'100%',background:saving?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:800,fontSize:'16px',textTransform:'uppercase',letterSpacing:'1px',border:'none',padding:'14px',borderRadius:'8px',cursor:saving?'not-allowed':'pointer',marginTop:'8px'}}>
               {saving?'Guardando...':'💾 Guardar todos los cambios'}
