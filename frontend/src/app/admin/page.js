@@ -32,6 +32,8 @@ const DEFAULT_CONTENT = {
   footer_link_whatsapp_label:'💬 WhatsApp',
   footer_link_terms_label:'📄 Términos y Condiciones',
   footer_copyright:'© 2026 Reto Mundialista · Plaza Las Américas · Participación 100% gratuita',
+  register_check_terms:'Acepto los <a href="#" style="color:var(--gold)">términos y condiciones</a> del Reto Mundialista Plaza Las Américas',
+  register_check_marketing:'Acepto recibir comunicaciones comerciales y promociones de Plaza Las Américas',
 };
 
 export default function AdminPage() {
@@ -236,6 +238,13 @@ export default function AdminPage() {
               <F label="Instagram (dejar vacío para ocultar)" val={s('link_instagram')} set={v=>set('link_instagram',v)} />
               <F label="WhatsApp / Contacto (dejar vacío para ocultar)" val={s('link_whatsapp')} set={v=>set('link_whatsapp',v)} />
               <F label="Términos y Condiciones (dejar vacío para ocultar)" val={s('link_terms')} set={v=>set('link_terms',v)} />
+            </Sec>
+            <Sec title="📝 Registro — Textos legales (acepta HTML para hipervínculos)">
+              <F label='Checkbox 1 — Términos (usa <a href="URL">texto</a> para el link)' val={s('register_check_terms')} set={v=>set('register_check_terms',v)} ta />
+              <F label='Checkbox 2 — Marketing / Comunicaciones' val={s('register_check_marketing')} set={v=>set('register_check_marketing',v)} ta />
+              <div style={{fontSize:'11px',color:'#8899BB',marginTop:'4px',padding:'8px',background:'rgba(245,197,24,0.05)',borderRadius:'6px',border:'1px solid rgba(245,197,24,0.1)'}}>
+                💡 Puedes usar HTML: <code style={{color:'#F5C518',fontSize:'11px'}}>{'<a href="https://..." style="color:var(--gold)">texto del link</a>'}</code>
+              </div>
             </Sec>
             <Sec title="🦶 Footer — Textos">
               <F label="Texto link Plaza Las Américas" val={s('footer_link_website_label')} set={v=>set('footer_link_website_label',v)} />

@@ -65,6 +65,8 @@ const DEFAULT_CONTENT = {
   footer_link_whatsapp_label:'💬 WhatsApp',
   footer_link_terms_label:'📄 Términos y Condiciones',
   footer_copyright:'© 2026 Reto Mundialista · Plaza Las Américas · Participación 100% gratuita',
+  register_check_terms:'Acepto los <a href="#" style="color:var(--gold)">términos y condiciones</a> del Reto Mundialista Plaza Las Américas',
+  register_check_marketing:'Acepto recibir comunicaciones comerciales y promociones de Plaza Las Américas',
 };
 
 function hexToRgb(hex) {
@@ -414,7 +416,7 @@ function RegistroPage({setPage,setUser,showToast,c}) {
           ))}
         </div>
         <div style={{marginTop:'14px',display:'flex',flexDirection:'column',gap:'10px'}}>
-          {[['accepts_terms',`Acepto los <a href="${c('link_terms')||'#'}" style="color:var(--gold)">términos y condiciones</a> del Reto Mundialista Plaza Las Américas`],['accepts_marketing','Acepto recibir comunicaciones comerciales y promociones de Plaza Las Américas']].map(([key,label])=>(
+          {[['accepts_terms',c('register_check_terms')],['accepts_marketing',c('register_check_marketing')]].map(([key,label])=>(
             <label key={key} style={{display:'flex',alignItems:'flex-start',gap:'10px',cursor:'pointer'}}>
               <input type="checkbox" checked={form[key]} onChange={e=>setForm({...form,[key]:e.target.checked})} style={{marginTop:'2px',accentColor:'var(--gold)',width:'16px',height:'16px',flexShrink:0}} />
               <span style={{fontSize:'12px',color:'var(--muted)',lineHeight:1.5}} dangerouslySetInnerHTML={{__html:label}} />
