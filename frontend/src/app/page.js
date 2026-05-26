@@ -351,11 +351,13 @@ function RegistroPage({setPage,setUser,showToast,c}) {
 function computeBracket(matches, scores, tiebreakers) {
   const standings = {};
   matches.filter(m => m.phase === 'grupos').forEach(m => {
+    const rawA = scores[m.id+'_a'], rawB = scores[m.id+'_b'];
+    if (rawA === undefined || rawA === '' || rawB === undefined || rawB === '') return;
     const g = m.group_name;
     if (!standings[g]) standings[g] = {};
     if (!standings[g][m.team_a]) standings[g][m.team_a] = {name:m.team_a, code:m.team_a_code, pts:0, gf:0, ga:0, gd:0};
     if (!standings[g][m.team_b]) standings[g][m.team_b] = {name:m.team_b, code:m.team_b_code, pts:0, gf:0, ga:0, gd:0};
-    const sa = parseInt(scores[m.id+'_a'] ?? 0), sb = parseInt(scores[m.id+'_b'] ?? 0);
+    const sa = parseInt(rawA), sb = parseInt(rawB);
     standings[g][m.team_a].gf+=sa; standings[g][m.team_a].ga+=sb; standings[g][m.team_a].gd+=sa-sb;
     standings[g][m.team_b].gf+=sb; standings[g][m.team_b].ga+=sa; standings[g][m.team_b].gd+=sb-sa;
     if (sa>sb) standings[g][m.team_a].pts+=3;
