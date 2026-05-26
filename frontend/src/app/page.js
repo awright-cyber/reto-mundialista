@@ -54,6 +54,7 @@ const DEFAULT_CONTENT = {
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
   color_card:'#1E2535',color_muted:'#8899BB',
   background_type:'solid',background_value:'',background_overlay:'50',
+  nav_tab_inicio:'Inicio',nav_tab_predicciones:'Predicciones',nav_tab_dashboard:'Mi Reto',nav_tab_ranking:'Ranking',nav_tab_promos:'Plaza',
   link_terms:'#',link_instagram:'#',link_whatsapp:'#',link_website:'https://www.plazalasamericas.ec',
   footer_link_website_label:'🌐 Plaza Las Américas',
   footer_link_instagram_label:'📸 Instagram',
@@ -169,8 +170,8 @@ export default function Home() {
       {page==='landing' && <LandingPage setPage={setPage} c={c} bgType={bgType} />}
       {page==='registro' && <RegistroPage setPage={setPage} setUser={setUser} showToast={showToast} c={c} />}
       {page==='predicciones' && <PrediccionesPage user={user} showToast={showToast} c={c} />}
-      {page==='dashboard' && <DashboardPage user={user} />}
-      {page==='ranking' && <RankingPage />}
+      {page==='dashboard' && <DashboardPage user={user} c={c} />}
+      {page==='ranking' && <RankingPage c={c} />}
       {page==='promos' && <PromosPage c={c} />}
       <Footer c={c} />
     </div>
@@ -178,7 +179,7 @@ export default function Home() {
 }
 
 function Nav({page,setPage,user,c}) {
-  const tabs=[{id:'landing',label:'Inicio'},{id:'predicciones',label:'Predicciones'},{id:'dashboard',label:'Mi Reto'},{id:'ranking',label:'Ranking'},{id:'promos',label:'Plaza'}];
+  const tabs=[{id:'landing',label:c('nav_tab_inicio')},{id:'predicciones',label:c('nav_tab_predicciones')},{id:'dashboard',label:c('nav_tab_dashboard')},{id:'ranking',label:c('nav_tab_ranking')},{id:'promos',label:c('nav_tab_promos')}];
   const logoUrl = c('logo_url');
   const websiteLink = c('link_website') || 'https://www.plazalasamericas.ec';
   return (
@@ -478,7 +479,7 @@ function PrediccionesPage({user,showToast,c}) {
 
   return (
     <div style={{padding:'20px',maxWidth:'900px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Mis <span style={{color:'var(--gold)'}}>Predicciones</span></h2>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Mis <span style={{color:'var(--gold)'}}>{c('nav_tab_predicciones')}</span></h2>
       <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'14px'}}>Llena todas las fases antes del 10 de junio · Los equipos de eliminatorias se calculan según tus predicciones de grupos</p>
       {affectedPhases.length>0&&(
         <div style={{background:'rgba(249,115,22,0.1)',border:'1px solid rgba(249,115,22,0.35)',borderRadius:'8px',padding:'10px 14px',marginBottom:'12px',fontSize:'12px',color:'var(--orange)'}}>
@@ -557,14 +558,14 @@ function PrediccionesPage({user,showToast,c}) {
         </div>
       )}
       <button onClick={savePredictions} disabled={saving} style={{width:'100%',marginTop:'16px',background:saving?'var(--muted)':'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px',borderRadius:'8px',cursor:saving?'not-allowed':'pointer'}}>
-        {saving?'Guardando...':'💾 Guardar Predicciones'}
+        {saving?'Guardando...':`💾 Guardar ${c('nav_tab_predicciones')}`}
       </button>
       <p style={{textAlign:'center',fontSize:'11px',color:'var(--muted)',marginTop:'8px'}}>{c('predictions_lock_notice')}</p>
     </div>
   );
 }
 
-function DashboardPage({user}) {
+function DashboardPage({user,c}) {
   const [stats,setStats] = useState(null);
   useEffect(()=>{
     if (!user) return;
@@ -575,13 +576,13 @@ function DashboardPage({user}) {
     <div style={{padding:'60px 20px',textAlign:'center'}}>
       <div style={{fontSize:'48px',marginBottom:'16px'}}>👤</div>
       <h2 style={{fontWeight:800,fontSize:'24px',color:'var(--gold)',marginBottom:'8px'}}>REGÍSTRATE PRIMERO</h2>
-      <p style={{color:'var(--muted)'}}>Necesitas una cuenta para ver tu dashboard</p>
+      <p style={{color:'var(--muted)'}}>Necesitas una cuenta para ver {c('nav_tab_dashboard')}</p>
     </div>
   );
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'600px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}>Mi <span style={{color:'var(--gold)'}}>Dashboard</span></h2>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}><span style={{color:'var(--gold)'}}>{c('nav_tab_dashboard')}</span></h2>
       <div style={{background:'var(--dark3)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.15)',borderRadius:'14px',padding:'20px',marginBottom:'16px'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
           <div>
@@ -607,7 +608,7 @@ function DashboardPage({user}) {
   );
 }
 
-function RankingPage() {
+function RankingPage({c}) {
   const [ranking,setRanking] = useState([]);
   const [loading,setLoading] = useState(true);
   useEffect(()=>{
@@ -616,7 +617,7 @@ function RankingPage() {
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'700px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}>Ranking <span style={{color:'var(--gold)'}}>Global</span></h2>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}>{c('nav_tab_ranking')} <span style={{color:'var(--gold)'}}>Global</span></h2>
       {loading?<div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>Cargando ranking...</div>:(
         <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
           {ranking.length===0&&<div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>El ranking se activará cuando comiencen los partidos</div>}
@@ -650,7 +651,7 @@ function PromosPage({c}) {
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'900px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Plaza Las <span style={{color:'var(--gold)'}}>Américas</span></h2>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>{c('nav_tab_promos')} Las <span style={{color:'var(--gold)'}}>Américas</span></h2>
       <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'16px'}}>Promociones mundialistas exclusivas para participantes</p>
       <div style={{background:'linear-gradient(135deg,rgba(var(--gold-rgb,245,197,24),0.08),rgba(249,115,22,0.05))',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',borderRadius:'12px',padding:'16px',marginBottom:'16px',textAlign:'center'}}>
         <div style={{fontSize:'11px',color:'var(--gold)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>🎉 Evento especial</div>

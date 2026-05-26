@@ -19,6 +19,7 @@ const DEFAULT_CONTENT = {
   event_schedule:'📅 Todos los días del Mundial · 16h00 - 22h00',
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
   background_type:'solid',background_value:'',background_overlay:'50',
+  nav_tab_inicio:'Inicio',nav_tab_predicciones:'Predicciones',nav_tab_dashboard:'Mi Reto',nav_tab_ranking:'Ranking',nav_tab_promos:'Plaza',
   link_terms:'',link_instagram:'',link_whatsapp:'',link_website:'https://www.plazalasamericas.ec',
   logo_url:'',
   footer_link_website_label:'🌐 Plaza Las Américas',
@@ -170,6 +171,24 @@ export default function AdminPage() {
             </Sec>
             <Sec title="⚠️ Avisos">
               <F label="Aviso cierre predicciones" val={s('predictions_lock_notice')} set={v=>set('predictions_lock_notice',v)} />
+            </Sec>
+            <Sec title="🧭 Navegación (pestañas del menú)">
+              <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>
+                Estos son los títulos que aparecen en el menú superior. Los títulos de sección dentro de cada página se actualizan automáticamente al cambiar estos valores.
+              </p>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                <F label="Pestaña Inicio" val={s('nav_tab_inicio')} set={v=>set('nav_tab_inicio',v)} />
+                <F label="Pestaña Predicciones" val={s('nav_tab_predicciones')} set={v=>set('nav_tab_predicciones',v)} />
+                <F label="Pestaña Mi Reto (dashboard)" val={s('nav_tab_dashboard')} set={v=>set('nav_tab_dashboard',v)} />
+                <F label="Pestaña Ranking" val={s('nav_tab_ranking')} set={v=>set('nav_tab_ranking',v)} />
+                <F label="Pestaña Plaza (promociones)" val={s('nav_tab_promos')} set={v=>set('nav_tab_promos',v)} />
+              </div>
+              <div style={{marginTop:'12px',background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'8px',padding:'10px 14px',display:'flex',gap:'4px',alignItems:'center',overflowX:'auto'}}>
+                {['nav_tab_inicio','nav_tab_predicciones','nav_tab_dashboard','nav_tab_ranking','nav_tab_promos'].map(k=>(
+                  <span key={k} style={{background:'rgba(245,197,24,0.1)',border:'1px solid rgba(245,197,24,0.2)',borderRadius:'5px',padding:'4px 10px',fontSize:'12px',fontWeight:500,color:'#F5C518',whiteSpace:'nowrap'}}>{s(k)}</span>
+                ))}
+              </div>
+              <p style={{fontSize:'11px',color:'#8899BB',marginTop:'6px'}}>Vista previa del menú de navegación.</p>
             </Sec>
             <Sec title="🖼️ Logo de Plaza Las Américas">
               <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'10px'}}>
