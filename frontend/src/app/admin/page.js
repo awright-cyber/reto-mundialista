@@ -19,6 +19,7 @@ const DEFAULT_CONTENT = {
   event_schedule:'📅 Todos los días del Mundial · 16h00 - 22h00',
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
   background_type:'solid',background_value:'',background_overlay:'50',
+  nav_logo_word1:'Reto',nav_logo_word2:'Mundial',
   nav_tab_inicio:'Inicio',nav_tab_predicciones:'Predicciones',nav_tab_dashboard:'Mi Reto',nav_tab_ranking:'Ranking',nav_tab_promos:'Plaza',
   link_terms:'',link_instagram:'',link_whatsapp:'',link_website:'https://www.plazalasamericas.ec',
   logo_url:'',
@@ -176,6 +177,22 @@ export default function AdminPage() {
               <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>
                 Estos son los títulos que aparecen en el menú superior. Los títulos de sección dentro de cada página se actualizan automáticamente al cambiar estos valores.
               </p>
+              <div style={{marginBottom:'14px'}}>
+                <p style={{fontSize:'11px',fontWeight:600,color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'8px'}}>Nombre del logo (esquina superior izquierda)</p>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'10px'}}>
+                  <F label="Primera palabra (en dorado)" val={s('nav_logo_word1')} set={v=>set('nav_logo_word1',v)} />
+                  <F label="Segunda palabra (en blanco)" val={s('nav_logo_word2')} set={v=>set('nav_logo_word2',v)} />
+                </div>
+                <div style={{background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'8px',padding:'10px 16px',display:'inline-flex',alignItems:'center',gap:'6px'}}>
+                  <span style={{fontWeight:900,fontSize:'18px',color:'#F5C518',textTransform:'uppercase',letterSpacing:'1px'}}>
+                    {s('nav_logo_word1')} <span style={{color:'#F0F4FF'}}>{s('nav_logo_word2')}</span>
+                  </span>
+                </div>
+                <p style={{fontSize:'11px',color:'#8899BB',marginTop:'6px'}}>Vista previa del logo en el menú.</p>
+              </div>
+              <div style={{borderTop:'1px solid rgba(255,255,255,0.07)',paddingTop:'14px',marginBottom:'8px'}}>
+                <p style={{fontSize:'11px',fontWeight:600,color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'10px'}}>Pestañas de navegación</p>
+              </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
                 <F label="Pestaña Inicio" val={s('nav_tab_inicio')} set={v=>set('nav_tab_inicio',v)} />
                 <F label="Pestaña Predicciones" val={s('nav_tab_predicciones')} set={v=>set('nav_tab_predicciones',v)} />

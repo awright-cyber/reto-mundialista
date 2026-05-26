@@ -54,6 +54,7 @@ const DEFAULT_CONTENT = {
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
   color_card:'#1E2535',color_muted:'#8899BB',
   background_type:'solid',background_value:'',background_overlay:'50',
+  nav_logo_word1:'Reto',nav_logo_word2:'Mundial',
   nav_tab_inicio:'Inicio',nav_tab_predicciones:'Predicciones',nav_tab_dashboard:'Mi Reto',nav_tab_ranking:'Ranking',nav_tab_promos:'Plaza',
   link_terms:'#',link_instagram:'#',link_whatsapp:'#',link_website:'https://www.plazalasamericas.ec',
   footer_link_website_label:'🌐 Plaza Las Américas',
@@ -186,7 +187,7 @@ function Nav({page,setPage,user,c}) {
     <nav style={{background:'rgba(var(--dark-rgb,10,14,26),0.97)',backdropFilter:'blur(12px)',padding:'0 12px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'56px',borderBottom:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',position:'sticky',top:0,zIndex:100}}>
       <div style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer'}} onClick={()=>setPage('landing')}>
         <span style={{fontWeight:900,fontSize:'18px',color:'var(--gold)',textTransform:'uppercase',letterSpacing:'1px'}}>
-          Reto <span style={{color:'var(--text)'}}>Mundial</span>
+          {c('nav_logo_word1')} <span style={{color:'var(--text)'}}>{c('nav_logo_word2')}</span>
         </span>
       </div>
       <div style={{display:'flex',gap:'2px',overflowX:'auto'}}>
