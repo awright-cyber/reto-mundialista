@@ -48,6 +48,7 @@ const DEFAULT_CONTENT = {
   stat_matches_label:'Partidos',stat_teams_label:'Selecciones',stat_free_label:'Gratuito',stat_start_label:'Inicio',
   prize_amount:'$500',prize_description:'Gift Card para el ganador del Reto Mundialista',
   predictions_lock_notice:'⚠️ Predicciones se bloquean el 10 de junio a las 23:59 hora Ecuador',
+  event_badge:'🎉 Evento especial',
   event_title:'ZONA MUNDIAL · Plaza Las Américas',
   event_description:'Pantallas gigantes · Activaciones · Sorteos en vivo',
   event_schedule:'📅 Todos los días del Mundial · 16h00 - 22h00',
@@ -655,7 +656,7 @@ function PromosPage({c}) {
       <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>{c('nav_tab_promos')} Las <span style={{color:'var(--gold)'}}>Américas</span></h2>
       <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'16px'}}>Promociones mundialistas exclusivas para participantes</p>
       <div style={{background:'linear-gradient(135deg,rgba(var(--gold-rgb,245,197,24),0.08),rgba(249,115,22,0.05))',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',borderRadius:'12px',padding:'16px',marginBottom:'16px',textAlign:'center'}}>
-        <div style={{fontSize:'11px',color:'var(--gold)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>🎉 Evento especial</div>
+        {c('event_badge') && <div style={{fontSize:'11px',color:'var(--gold)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>{c('event_badge')}</div>}
         <div style={{fontWeight:800,fontSize:'18px',marginBottom:'4px'}}>{c('event_title')}</div>
         <div style={{fontSize:'12px',color:'var(--muted)'}}>{c('event_description')}</div>
         <div style={{marginTop:'8px',display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(34,197,94,0.12)',borderRadius:'6px',padding:'4px 12px',fontSize:'12px',color:'var(--green)',fontWeight:600}}>{c('event_schedule')}</div>

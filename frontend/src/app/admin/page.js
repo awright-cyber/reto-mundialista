@@ -15,6 +15,7 @@ const DEFAULT_CONTENT = {
   stat_matches_label:'Partidos',stat_teams_label:'Selecciones',stat_free_label:'Gratuito',stat_start_label:'Inicio',
   prize_amount:'$500',prize_description:'Gift Card para el ganador del Reto Mundialista',
   predictions_lock_notice:'⚠️ Predicciones se bloquean el 10 de junio a las 23:59 hora Ecuador',
+  event_badge:'🎉 Evento especial',
   event_title:'ZONA MUNDIAL · Plaza Las Américas',event_description:'Pantallas gigantes · Activaciones · Sorteos en vivo',
   event_schedule:'📅 Todos los días del Mundial · 16h00 - 22h00',
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
@@ -166,6 +167,7 @@ export default function AdminPage() {
               </div>
             </Sec>
             <Sec title="🎉 Zona Mundial">
+              <F label="Badge superior (dejar vacío para ocultar)" val={s('event_badge')} set={v=>set('event_badge',v)} />
               <F label="Título del evento" val={s('event_title')} set={v=>set('event_title',v)} />
               <F label="Descripción" val={s('event_description')} set={v=>set('event_description',v)} />
               <F label="Horario" val={s('event_schedule')} set={v=>set('event_schedule',v)} />
