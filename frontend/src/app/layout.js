@@ -29,8 +29,22 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  const colorScript = `
+    try {
+      var c=JSON.parse(localStorage.getItem('reto_cms')||'{}'),r=document.documentElement;
+      function h(x){var v=x.replace('#','');return parseInt(v.slice(0,2),16)+','+parseInt(v.slice(2,4),16)+','+parseInt(v.slice(4,6),16);}
+      if(c.color_background){r.style.setProperty('--dark',c.color_background);r.style.setProperty('--dark2',c.color_background);r.style.setProperty('--dark-rgb',h(c.color_background));}
+      if(c.color_primary){r.style.setProperty('--gold',c.color_primary);r.style.setProperty('--gold2',c.color_primary);r.style.setProperty('--gold-rgb',h(c.color_primary));}
+      if(c.color_text)r.style.setProperty('--text',c.color_text);
+      if(c.color_card){r.style.setProperty('--card',c.color_card);r.style.setProperty('--dark3',c.color_card);}
+      if(c.color_muted)r.style.setProperty('--muted',c.color_muted);
+    } catch(e){}
+  `;
   return (
     <html lang="es" className={`${barlowCondensed.variable} ${barlow.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: colorScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );

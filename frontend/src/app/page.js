@@ -73,7 +73,15 @@ function hexToRgb(hex) {
 }
 
 function useContent() {
-  const [content,setContent] = useState(DEFAULT_CONTENT);
+  const [content,setContent] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('reto_cms');
+        if (cached) return {...DEFAULT_CONTENT, ...JSON.parse(cached)};
+      } catch(e) {}
+    }
+    return DEFAULT_CONTENT;
+  });
   useEffect(() => {
     supabase.from('app_content').select('key,value')
       .then(({data}) => {
@@ -81,6 +89,7 @@ function useContent() {
           const obj={};
           data.forEach(r=>{obj[r.key]=r.value;});
           setContent(prev=>({...prev,...obj}));
+          try { localStorage.setItem('reto_cms', JSON.stringify(obj)); } catch(e) {}
           const root = document.documentElement;
           const cm = obj;
           if (cm.color_primary) {
