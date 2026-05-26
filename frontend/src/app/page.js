@@ -48,6 +48,8 @@ const DEFAULT_CONTENT = {
   stat_matches_label:'Partidos',stat_teams_label:'Selecciones',stat_free_label:'Gratuito',stat_start_label:'Inicio',
   prize_amount:'$500',prize_description:'Gift Card para el ganador del Reto Mundialista',
   predictions_lock_notice:'⚠️ Predicciones se bloquean el 10 de junio a las 23:59 hora Ecuador',
+  promos_title:'Plaza Las Américas',
+  promos_subtitle:'Promociones mundialistas exclusivas para participantes',
   event_badge:'🎉 Evento especial',
   event_title:'ZONA MUNDIAL · Plaza Las Américas',
   event_description:'Pantallas gigantes · Activaciones · Sorteos en vivo',
@@ -114,7 +116,7 @@ export default function Home() {
     setTimeout(()=>setToast(null),3000);
   };
 
-  const c = (key) => content[key] || DEFAULT_CONTENT[key] || '';
+  const c = (key) => content[key] ?? DEFAULT_CONTENT[key] ?? '';
 
   const bgType = content.background_type || 'solid';
   const bgValue = content.background_value || '';
@@ -645,6 +647,10 @@ function RankingPage({c}) {
 function PromosPage({c}) {
   const [promos,setPromos] = useState([]);
   const [loading,setLoading] = useState(true);
+  const promoTitle = c('promos_title') || 'Plaza Las Américas';
+  const lastSpace = promoTitle.lastIndexOf(' ');
+  const promoTitleStart = lastSpace > 0 ? promoTitle.substring(0, lastSpace) : promoTitle;
+  const promoTitleEnd = lastSpace > 0 ? promoTitle.substring(lastSpace + 1) : '';
 
   useEffect(()=>{
     supabase.from('promotions').select('*').eq('is_active',true).order('sort_order',{ascending:true})
@@ -653,8 +659,10 @@ function PromosPage({c}) {
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'900px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>{c('nav_tab_promos')} Las <span style={{color:'var(--gold)'}}>Américas</span></h2>
-      <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'16px'}}>Promociones mundialistas exclusivas para participantes</p>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>
+        {promoTitleEnd ? <>{promoTitleStart} <span style={{color:'var(--gold)'}}>{promoTitleEnd}</span></> : promoTitleStart}
+      </h2>
+      {c('promos_subtitle') && <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'16px'}}>{c('promos_subtitle')}</p>}
       <div style={{background:'linear-gradient(135deg,rgba(var(--gold-rgb,245,197,24),0.08),rgba(249,115,22,0.05))',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',borderRadius:'12px',padding:'16px',marginBottom:'16px',textAlign:'center'}}>
         {c('event_badge') && <div style={{fontSize:'11px',color:'var(--gold)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>{c('event_badge')}</div>}
         <div style={{fontWeight:800,fontSize:'18px',marginBottom:'4px'}}>{c('event_title')}</div>

@@ -16,6 +16,9 @@ const DEFAULT_CONTENT = {
   prize_amount:'$500',prize_description:'Gift Card para el ganador del Reto Mundialista',
   predictions_lock_notice:'⚠️ Predicciones se bloquean el 10 de junio a las 23:59 hora Ecuador',
   event_badge:'🎉 Evento especial',
+  promos_title:'Plaza Las Américas',
+  promos_subtitle:'Promociones mundialistas exclusivas para participantes',
+  event_badge:'🎉 Evento especial',
   event_title:'ZONA MUNDIAL · Plaza Las Américas',event_description:'Pantallas gigantes · Activaciones · Sorteos en vivo',
   event_schedule:'📅 Todos los días del Mundial · 16h00 - 22h00',
   color_primary:'#F5C518',color_background:'#0A0E1A',color_text:'#F0F4FF',
@@ -97,7 +100,7 @@ export default function AdminPage() {
   };
 
   const showMsg = (m) => {setMsg(m);setTimeout(()=>setMsg(''),3000);};
-  const s = (k) => content[k]||DEFAULT_CONTENT[k]||'';
+  const s = (k) => content[k] ?? DEFAULT_CONTENT[k] ?? '';
   const set = (k,v) => setContent(p=>({...p,[k]:v}));
 
   const downloadCSV = (data,filename) => {
@@ -165,6 +168,11 @@ export default function AdminPage() {
                 <F label="Número 4" val={s('stat_start')} set={v=>set('stat_start',v)} />
                 <F label="Etiqueta 4" val={s('stat_start_label')} set={v=>set('stat_start_label',v)} />
               </div>
+            </Sec>
+            <Sec title="🏬 Pestaña Locales">
+              <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'10px'}}>Textos del encabezado de la sección de promociones. La última palabra del título se resalta en dorado automáticamente.</p>
+              <F label="Título (ej: Plaza Las Américas)" val={s('promos_title')} set={v=>set('promos_title',v)} />
+              <F label="Subtítulo (dejar vacío para ocultar)" val={s('promos_subtitle')} set={v=>set('promos_subtitle',v)} />
             </Sec>
             <Sec title="🎉 Zona Mundial">
               <F label="Badge superior (dejar vacío para ocultar)" val={s('event_badge')} set={v=>set('event_badge',v)} />
