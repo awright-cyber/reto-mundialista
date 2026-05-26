@@ -120,6 +120,19 @@ export default function Home() {
   const [toast,setToast] = useState(null);
   const content = useContent();
 
+  useEffect(()=>{
+    supabase.auth.getSession().then(async ({data:{session}})=>{
+      if (session) {
+        const {data} = await supabase.from('users').select('*').eq('id',session.user.id).single();
+        if (data) setUser(data);
+      }
+    });
+    const {data:{subscription}} = supabase.auth.onAuthStateChange((event)=>{
+      if (event==='SIGNED_OUT') setUser(null);
+    });
+    return ()=>subscription.unsubscribe();
+  },[]);
+
   const showToast = (msg,color='var(--gold)') => {
     setToast({msg,color});
     setTimeout(()=>setToast(null),3000);
@@ -143,7 +156,7 @@ export default function Home() {
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,backgroundImage:`url(${bgValue})`,backgroundSize:'cover',backgroundPosition:'center',zIndex:-2}} />
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:`rgba(var(--dark-rgb,10,14,26),${bgOverlay/100})`,zIndex:-1}} />
       </>}
-      <Nav page={page} setPage={setPage} user={user} c={c} />
+      <Nav page={page} setPage={setPage} user={user} setUser={setUser} c={c} />
       {toast && (
         <div style={{position:'fixed',top:'65px',right:'16px',zIndex:999,background:'var(--card2)',border:`1px solid ${toast.color}`,borderRadius:'10px',padding:'12px 16px',fontSize:'13px',fontWeight:500,display:'flex',alignItems:'center',gap:'8px',boxShadow:'0 4px 20px rgba(0,0,0,0.4)',maxWidth:'280px'}}>
           <span style={{color:toast.color,fontSize:'18px'}}>✓</span><span>{toast.msg}</span>
@@ -181,9 +194,10 @@ export default function Home() {
   .border-gold { border-color: rgba(var(--gold-rgb),0.3) !important; }
 `}</style>
       {page==='landing' && <LandingPage setPage={setPage} c={c} bgType={bgType} />}
+      {page==='login' && <LoginPage setPage={setPage} setUser={setUser} showToast={showToast} c={c} />}
       {page==='registro' && <RegistroPage setPage={setPage} setUser={setUser} showToast={showToast} c={c} />}
       {page==='predicciones' && <PrediccionesPage user={user} showToast={showToast} c={c} />}
-      {page==='dashboard' && <DashboardPage user={user} c={c} />}
+      {page==='dashboard' && <DashboardPage user={user} setPage={setPage} c={c} />}
       {page==='ranking' && <RankingPage c={c} />}
       {page==='promos' && <PromosPage c={c} />}
       <Footer c={c} />
@@ -191,29 +205,44 @@ export default function Home() {
   );
 }
 
-function Nav({page,setPage,user,c}) {
+function Nav({page,setPage,user,setUser,c}) {
   const tabs=[{id:'landing',label:c('nav_tab_inicio')},{id:'predicciones',label:c('nav_tab_predicciones')},{id:'dashboard',label:c('nav_tab_dashboard')},{id:'ranking',label:c('nav_tab_ranking')},{id:'promos',label:c('nav_tab_promos')}];
   const logoUrl = c('logo_url');
   const websiteLink = c('link_website') || 'https://www.plazalasamericas.ec';
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setPage('landing');
+  };
   return (
     <nav style={{background:'rgba(var(--dark-rgb,10,14,26),0.97)',backdropFilter:'blur(12px)',padding:'0 12px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'56px',borderBottom:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',position:'sticky',top:0,zIndex:100}}>
-      <div style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer'}} onClick={()=>setPage('landing')}>
+      <div style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer',flexShrink:0}} onClick={()=>setPage('landing')}>
         <span style={{fontWeight:900,fontSize:'18px',color:'var(--gold)',textTransform:'uppercase',letterSpacing:'1px'}}>
           {c('nav_logo_word1')} <span style={{color:'var(--text)'}}>{c('nav_logo_word2')}</span>
         </span>
       </div>
-      <div style={{display:'flex',gap:'2px',overflowX:'auto'}}>
+      <div style={{display:'flex',gap:'2px',overflowX:'auto',flex:1,justifyContent:'center',padding:'0 8px'}}>
         {tabs.map(t=>(
           <button key={t.id} onClick={()=>setPage(t.id)} style={{background:page===t.id?'rgba(var(--gold-rgb,245,197,24),0.12)':'none',border:'none',color:page===t.id?'var(--gold)':'var(--muted)',fontSize:'12px',fontWeight:500,padding:'6px 10px',borderRadius:'6px',cursor:'pointer',textTransform:'uppercase',letterSpacing:'.5px',whiteSpace:'nowrap'}}>{t.label}</button>
         ))}
       </div>
-      <a href={websiteLink} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:'5px',background:'rgba(var(--gold-rgb,245,197,24),0.1)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',borderRadius:'6px',padding:'5px 10px',fontSize:'11px',fontWeight:600,color:'var(--gold)',textDecoration:'none',whiteSpace:'nowrap'}}>
-        {logoUrl ? (
-          <img src={logoUrl} alt="Plaza Las Américas" style={{height:'28px',objectFit:'contain'}} />
+      <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
+        {user ? (
+          <>
+            <span style={{fontSize:'12px',fontWeight:600,color:'var(--gold)',maxWidth:'80px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer'}} onClick={()=>setPage('dashboard')}>{user.full_name.split(' ')[0]}</span>
+            <button onClick={handleLogout} style={{background:'none',border:'1px solid rgba(255,255,255,0.15)',borderRadius:'6px',padding:'4px 8px',fontSize:'11px',color:'var(--muted)',cursor:'pointer',whiteSpace:'nowrap'}}>Salir</button>
+          </>
         ) : (
-          '🏬 Plaza'
+          <button onClick={()=>setPage('login')} style={{background:'rgba(var(--gold-rgb,245,197,24),0.1)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.3)',borderRadius:'6px',padding:'5px 10px',fontSize:'11px',fontWeight:600,color:'var(--gold)',cursor:'pointer',whiteSpace:'nowrap'}}>🔑 Entrar</button>
         )}
-      </a>
+        <a href={websiteLink} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',background:'rgba(var(--gold-rgb,245,197,24),0.1)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.2)',borderRadius:'6px',padding:'5px 8px',textDecoration:'none'}}>
+          {logoUrl ? (
+            <img src={logoUrl} alt="Plaza" style={{height:'26px',objectFit:'contain'}} />
+          ) : (
+            <span style={{fontSize:'11px',fontWeight:600,color:'var(--gold)'}}>🏬</span>
+          )}
+        </a>
+      </div>
     </nav>
   );
 }
@@ -294,8 +323,56 @@ function LandingPage({setPage,c,bgType}) {
   );
 }
 
+function LoginPage({setPage,setUser,showToast,c}) {
+  const [form,setForm] = useState({email:'',password:''});
+  const [loading,setLoading] = useState(false);
+  const [error,setError] = useState('');
+
+  const handleLogin = async () => {
+    setError('');
+    if (!form.email||!form.password){setError('Por favor ingresa email y contraseña');return;}
+    setLoading(true);
+    const {error:authErr} = await supabase.auth.signInWithPassword({email:form.email,password:form.password});
+    if (authErr){setError('Email o contraseña incorrectos');setLoading(false);return;}
+    const {data:{session}} = await supabase.auth.getSession();
+    if (session) {
+      const {data} = await supabase.from('users').select('*').eq('id',session.user.id).single();
+      if (data){setUser(data);showToast(`¡Bienvenido, ${data.full_name.split(' ')[0]}!`,'var(--green)');setPage('dashboard');}
+      else {setError('No se encontró tu perfil. Contáctanos.');}
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{padding:'24px 20px',maxWidth:'460px',margin:'0 auto'}}>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Iniciar <span style={{color:'var(--gold)'}}>Sesión</span></h2>
+      <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'20px'}}>Accede a tus predicciones y resultados</p>
+      <div style={{background:'var(--card)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'12px',padding:'20px'}}>
+        <div style={{display:'flex',flexDirection:'column',gap:'14px'}}>
+          {[['Email','email','email','correo@ejemplo.com'],['Contraseña','password','password','Tu contraseña']].map(([label,key,type,ph])=>(
+            <div key={key}>
+              <label style={{fontSize:'11px',fontWeight:600,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',display:'block',marginBottom:'5px'}}>{label}</label>
+              <input type={type} placeholder={ph} value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})}
+                onKeyDown={e=>e.key==='Enter'&&handleLogin()}
+                style={{width:'100%',background:'var(--dark)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'8px',padding:'10px 12px',color:'var(--text)',fontSize:'14px'}} />
+            </div>
+          ))}
+        </div>
+        {error && <div style={{marginTop:'12px',background:'rgba(230,57,70,0.1)',border:'1px solid rgba(230,57,70,0.3)',borderRadius:'8px',padding:'10px 12px',fontSize:'13px',color:'var(--red-light)'}}>{error}</div>}
+        <button onClick={handleLogin} disabled={loading} style={{width:'100%',marginTop:'18px',background:loading?'var(--muted)':'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px',borderRadius:'8px',cursor:loading?'not-allowed':'pointer'}}>
+          {loading?'Ingresando...':'Entrar →'}
+        </button>
+        <p style={{textAlign:'center',marginTop:'16px',fontSize:'13px',color:'var(--muted)'}}>
+          ¿No tienes cuenta?{' '}
+          <button onClick={()=>setPage('registro')} style={{background:'none',border:'none',color:'var(--gold)',fontWeight:600,cursor:'pointer',fontSize:'13px'}}>Regístrate gratis</button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function RegistroPage({setPage,setUser,showToast,c}) {
-  const [form,setForm] = useState({full_name:'',cedula:'',phone:'',email:'',city:'',birth_date:'',accepts_terms:false,accepts_marketing:false});
+  const [form,setForm] = useState({full_name:'',cedula:'',phone:'',email:'',city:'',birth_date:'',password:'',confirmPassword:'',accepts_terms:false,accepts_marketing:false});
   const [loading,setLoading] = useState(false);
   const [error,setError] = useState('');
 
@@ -303,11 +380,16 @@ function RegistroPage({setPage,setUser,showToast,c}) {
     setError('');
     if (!form.accepts_terms){setError('Debes aceptar los términos y condiciones');return;}
     if (!form.full_name||!form.cedula||!form.email||!form.phone||!form.city||!form.birth_date){setError('Por favor llena todos los campos');return;}
+    if (!form.password||form.password.length<6){setError('La contraseña debe tener al menos 6 caracteres');return;}
+    if (form.password!==form.confirmPassword){setError('Las contraseñas no coinciden');return;}
     setLoading(true);
     try {
       const {data:existing} = await supabase.from('users').select('id').eq('cedula',form.cedula).single();
       if (existing){setError('Esta cédula ya está registrada');setLoading(false);return;}
-      const {data,error:err} = await supabase.from('users').insert([{...form,accepts_terms:true}]).select().single();
+      const {data:authData,error:authErr} = await supabase.auth.signUp({email:form.email,password:form.password});
+      if (authErr){setError(authErr.message);setLoading(false);return;}
+      const {password,confirmPassword,...profileData} = form;
+      const {data,error:err} = await supabase.from('users').insert([{id:authData.user.id,...profileData,accepts_terms:true}]).select().single();
       if (err){setError(err.message);setLoading(false);return;}
       await supabase.from('leaderboard').insert([{user_id:data.id}]);
       setUser(data);
@@ -323,7 +405,7 @@ function RegistroPage({setPage,setUser,showToast,c}) {
       <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'20px'}}>Únete al Reto Mundialista Plaza Las Américas 2026</p>
       <div style={{background:'var(--card)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'12px',padding:'20px'}}>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
-          {[['Nombre completo','full_name','text','Tu nombre completo'],['Cédula / Pasaporte','cedula','text','0123456789'],['Celular','phone','tel','0991234567'],['Email','email','email','correo@ejemplo.com'],['Ciudad','city','text','Quito'],['Fecha de nacimiento','birth_date','date','']].map(([label,key,type,ph])=>(
+          {[['Nombre completo','full_name','text','Tu nombre completo'],['Cédula / Pasaporte','cedula','text','0123456789'],['Celular','phone','tel','0991234567'],['Email','email','email','correo@ejemplo.com'],['Ciudad','city','text','Quito'],['Fecha de nacimiento','birth_date','date',''],['Contraseña','password','password','Mínimo 6 caracteres'],['Confirmar contraseña','confirmPassword','password','Repite tu contraseña']].map(([label,key,type,ph])=>(
             <div key={key}>
               <label style={{fontSize:'11px',fontWeight:600,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',display:'block',marginBottom:'5px'}}>{label}</label>
               <input type={type} placeholder={ph} value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})}
@@ -343,6 +425,10 @@ function RegistroPage({setPage,setUser,showToast,c}) {
         <button onClick={handleSubmit} disabled={loading} style={{width:'100%',marginTop:'18px',background:loading?'var(--muted)':'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px',borderRadius:'8px',cursor:loading?'not-allowed':'pointer'}}>
           {loading?'Registrando...':'Registrarme y hacer mis predicciones →'}
         </button>
+        <p style={{textAlign:'center',marginTop:'16px',fontSize:'13px',color:'var(--muted)'}}>
+          ¿Ya tienes cuenta?{' '}
+          <button onClick={()=>setPage('login')} style={{background:'none',border:'none',color:'var(--gold)',fontWeight:600,cursor:'pointer',fontSize:'13px'}}>Iniciar sesión</button>
+        </p>
       </div>
     </div>
   );
@@ -580,7 +666,7 @@ function PrediccionesPage({user,showToast,c}) {
   );
 }
 
-function DashboardPage({user,c}) {
+function DashboardPage({user,setPage,c}) {
   const [stats,setStats] = useState(null);
   useEffect(()=>{
     if (!user) return;
@@ -589,9 +675,13 @@ function DashboardPage({user,c}) {
 
   if (!user) return (
     <div style={{padding:'60px 20px',textAlign:'center'}}>
-      <div style={{fontSize:'48px',marginBottom:'16px'}}>👤</div>
-      <h2 style={{fontWeight:800,fontSize:'24px',color:'var(--gold)',marginBottom:'8px'}}>REGÍSTRATE PRIMERO</h2>
-      <p style={{color:'var(--muted)'}}>Necesitas una cuenta para ver {c('nav_tab_dashboard')}</p>
+      <div style={{fontSize:'48px',marginBottom:'16px'}}>🔑</div>
+      <h2 style={{fontWeight:800,fontSize:'24px',color:'var(--gold)',marginBottom:'8px',textTransform:'uppercase'}}>Inicia Sesión</h2>
+      <p style={{color:'var(--muted)',marginBottom:'24px'}}>Accede a tus predicciones y puntos</p>
+      <div style={{display:'flex',gap:'12px',justifyContent:'center',flexWrap:'wrap'}}>
+        <button onClick={()=>setPage('login')} style={{background:'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'15px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'12px 28px',borderRadius:'8px',cursor:'pointer'}}>Iniciar sesión</button>
+        <button onClick={()=>setPage('registro')} style={{background:'transparent',color:'var(--text)',fontWeight:700,fontSize:'14px',border:'1px solid rgba(255,255,255,0.2)',padding:'10px 20px',borderRadius:'8px',cursor:'pointer'}}>Registrarme</button>
+      </div>
     </div>
   );
 
