@@ -195,7 +195,7 @@ export default function Home() {
   .accent-gold { color: var(--gold) !important; }
   .border-gold { border-color: rgba(var(--gold-rgb),0.3) !important; }
 `}</style>
-      {page==='landing' && <LandingPage setPage={setPage} c={c} bgType={bgType} />}
+      {page==='landing' && <LandingPage setPage={setPage} c={c} bgType={bgType} user={user} />}
       {page==='login' && <LoginPage setPage={setPage} setUser={setUser} showToast={showToast} c={c} />}
       {page==='registro' && <RegistroPage setPage={setPage} setUser={setUser} showToast={showToast} c={c} />}
       {page==='predicciones' && <PrediccionesPage user={user} showToast={showToast} c={c} />}
@@ -280,7 +280,43 @@ function Footer({c}) {
   );
 }
 
-function LandingPage({setPage,c,bgType}) {
+function WelcomePanel({user,setPage}) {
+  const [stats,setStats] = useState(null);
+  useEffect(()=>{
+    supabase.from('leaderboard').select('total_points,global_rank').eq('user_id',user.id).single()
+      .then(({data})=>setStats(data));
+  },[user.id]);
+  const firstName = user.full_name.split(' ')[0];
+  return (
+    <div style={{padding:'32px 20px 40px',maxWidth:'560px',margin:'0 auto'}}>
+      <div style={{background:'linear-gradient(135deg,var(--card) 0%,var(--dark3) 100%)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.25)',borderRadius:'16px',padding:'28px 24px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'20px'}}>
+          <div style={{width:'42px',height:'42px',borderRadius:'50%',background:'rgba(var(--gold-rgb,245,197,24),0.15)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px',flexShrink:0}}>⚽</div>
+          <div>
+            <div style={{fontSize:'13px',color:'var(--muted)'}}>Bienvenido de vuelta</div>
+            <div style={{fontWeight:800,fontSize:'20px',color:'var(--gold)',textTransform:'uppercase',letterSpacing:'1px'}}>{firstName}</div>
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'20px'}}>
+          <div style={{background:'rgba(var(--dark-rgb,10,14,26),0.5)',borderRadius:'10px',padding:'14px',textAlign:'center'}}>
+            <div style={{fontSize:'11px',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>Posición global</div>
+            <div style={{fontWeight:900,fontSize:'32px',color:'var(--gold)',lineHeight:1}}>#{stats?.global_rank||'—'}</div>
+          </div>
+          <div style={{background:'rgba(var(--dark-rgb,10,14,26),0.5)',borderRadius:'10px',padding:'14px',textAlign:'center'}}>
+            <div style={{fontSize:'11px',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>Puntos</div>
+            <div style={{fontWeight:900,fontSize:'32px',color:'var(--text)',lineHeight:1}}>{stats?.total_points||0}</div>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:'10px'}}>
+          <button onClick={()=>setPage('predicciones')} style={{flex:1,background:'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'14px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'13px',borderRadius:'8px',cursor:'pointer'}}>Mis Predicciones</button>
+          <button onClick={()=>setPage('dashboard')} style={{flex:1,background:'transparent',color:'var(--text)',fontWeight:700,fontSize:'14px',letterSpacing:'1px',textTransform:'uppercase',border:'1px solid rgba(255,255,255,0.2)',padding:'11px',borderRadius:'8px',cursor:'pointer'}}>Mi Reto</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LandingPage({setPage,c,bgType,user}) {
   const heroBg = bgType === 'image'
     ? 'rgba(var(--dark-rgb,10,14,26),0.55)'
     : bgType === 'gradient'
@@ -288,6 +324,9 @@ function LandingPage({setPage,c,bgType}) {
       : 'linear-gradient(160deg,var(--dark) 0%,var(--dark3) 40%,var(--dark) 100%)';
   return (
     <div>
+      {user ? (
+        <WelcomePanel user={user} setPage={setPage} />
+      ) : (
       <div style={{background:heroBg,padding:'48px 20px 64px',textAlign:'center'}}>
         <div style={{display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(var(--gold-rgb,245,197,24),0.15)',border:'1px solid rgba(var(--gold-rgb,245,197,24),0.3)',borderRadius:'20px',padding:'4px 14px',fontSize:'11px',fontWeight:600,color:'var(--gold)',letterSpacing:'1px',textTransform:'uppercase',marginBottom:'20px'}}>{c('landing_badge')}</div>
         <h1 style={{fontWeight:900,fontSize:'clamp(40px,8vw,68px)',lineHeight:.95,letterSpacing:'-1px',textTransform:'uppercase',marginBottom:'12px'}}>
@@ -301,6 +340,7 @@ function LandingPage({setPage,c,bgType}) {
           <button onClick={()=>setPage('predicciones')} style={{background:'transparent',color:'var(--text)',fontWeight:700,fontSize:'14px',letterSpacing:'1px',textTransform:'uppercase',border:'1px solid rgba(255,255,255,0.2)',padding:'12px 24px',borderRadius:'8px',cursor:'pointer'}}>{c('landing_btn_secondary')}</button>
         </div>
       </div>
+      )}
       <div style={{display:'flex',justifyContent:'center',gap:'32px',padding:'24px 20px',background:'rgba(255,255,255,0.02)',borderTop:'1px solid rgba(255,255,255,0.06)',flexWrap:'wrap'}}>
         {[[c('stat_matches'),c('stat_matches_label')],[c('stat_teams'),c('stat_teams_label')],[c('stat_free'),c('stat_free_label')],[c('stat_start'),c('stat_start_label')]].map(([n,l])=>(
           <div key={l} style={{textAlign:'center'}}>
