@@ -380,19 +380,27 @@ function RegistroPage({setPage,setUser,showToast,c}) {
 
   const handleSubmit = async () => {
     setError('');
-    if (!form.accepts_terms){setError('Debes aceptar los términos y condiciones');return;}
     if (!form.full_name||!form.cedula||!form.email||!form.phone||!form.city||!form.birth_date){setError('Por favor llena todos los campos');return;}
     if (!form.password||form.password.length<6){setError('La contraseña debe tener al menos 6 caracteres');return;}
     if (form.password!==form.confirmPassword){setError('Las contraseñas no coinciden');return;}
+    if (!form.accepts_terms){setError('Debes aceptar los términos y condiciones');return;}
+    if (!form.accepts_marketing){setError('Debes aceptar recibir comunicaciones de Plaza Las Américas');return;}
     setLoading(true);
     try {
-      const {data:existing} = await supabase.from('users').select('id').eq('cedula',form.cedula).single();
-      if (existing){setError('Esta cédula ya está registrada');setLoading(false);return;}
       const {data:authData,error:authErr} = await supabase.auth.signUp({email:form.email,password:form.password});
-      if (authErr){setError(authErr.message);setLoading(false);return;}
+      if (authErr){
+        setError(authErr.message.includes('already')?'Este email ya tiene una cuenta registrada':authErr.message);
+        setLoading(false);return;
+      }
       const {password,confirmPassword,...profileData} = form;
       const {data,error:err} = await supabase.from('users').insert([{id:authData.user.id,...profileData,accepts_terms:true}]).select().single();
-      if (err){setError(err.message);setLoading(false);return;}
+      if (err){
+        await supabase.auth.signOut();
+        if (err.code==='23505'&&err.details?.includes('cedula')) setError('Esta cédula ya está registrada');
+        else if (err.code==='23505'&&err.details?.includes('email')) setError('Este email ya está registrado');
+        else setError(err.message);
+        setLoading(false);return;
+      }
       await supabase.from('leaderboard').insert([{user_id:data.id}]);
       setUser(data);
       showToast('¡Registro exitoso! Ahora haz tus predicciones','var(--green)');
