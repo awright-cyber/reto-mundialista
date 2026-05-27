@@ -217,11 +217,7 @@ INSERT INTO scoring_rules (code, description, points) VALUES
   ('bonus_runner_up', 'Subcampeón', 15),
   ('bonus_third_place', 'Tercer lugar', 10),
   ('bonus_top_scorer', 'Goleador del torneo', 10),
-  ('bonus_revelation', 'Equipo revelación', 5),
-  ('bonus_ecuador_groups', 'Ecuador clasifica grupos', 5),
-  ('bonus_ecuador_r16', 'Ecuador llega a octavos', 5),
-  ('bonus_ecuador_qf', 'Ecuador llega a cuartos', 5),
-  ('bonus_ecuador_sf', 'Ecuador llega a semifinales', 5);
+  ('bonus_revelation', 'Equipo revelación', 5);
 
 -- ============================================================
 -- TABLA: achievements base
@@ -421,9 +417,9 @@ BEGIN
   FROM users u
   LEFT JOIN predictions p ON p.user_id = u.id AND p.calculated_at IS NOT NULL
   LEFT JOIN (
-    SELECT user_id, 
-      pts_champion + pts_runner_up + pts_third_place + 
-      pts_top_scorer + pts_revelation + pts_ecuador as bonus
+    SELECT user_id,
+      pts_champion + pts_runner_up + pts_third_place +
+      pts_top_scorer + pts_revelation AS bonus
     FROM special_predictions
   ) sp_pts ON sp_pts.user_id = u.id
   GROUP BY u.id, sp_pts.bonus
