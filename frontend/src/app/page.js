@@ -423,8 +423,8 @@ function RegistroPage({setPage,setUser,showToast,c}) {
     if (!form.full_name||!form.cedula||!form.email||!form.phone||!form.city||!form.birth_date){setError('Por favor llena todos los campos');return;}
     if (!form.password||form.password.length<6){setError('La contraseña debe tener al menos 6 caracteres');return;}
     if (form.password!==form.confirmPassword){setError('Las contraseñas no coinciden');return;}
-    if (!form.accepts_terms){setError('Debes aceptar los términos y condiciones');return;}
-    if (!form.accepts_marketing){setError('Debes aceptar recibir comunicaciones de Plaza Las Américas');return;}
+    if (c('register_check_terms')&&c('register_check_terms').trim()&&!form.accepts_terms){setError('Debes aceptar los términos y condiciones');return;}
+    if (c('register_check_marketing')&&c('register_check_marketing').trim()&&!form.accepts_marketing){setError('Debes aceptar recibir comunicaciones de Plaza Las Américas');return;}
     setLoading(true);
     try {
       const {data:authData,error:authErr} = await supabase.auth.signUp({email:form.email,password:form.password});
@@ -464,7 +464,7 @@ function RegistroPage({setPage,setUser,showToast,c}) {
           ))}
         </div>
         <div style={{marginTop:'14px',display:'flex',flexDirection:'column',gap:'10px'}}>
-          {[['accepts_terms',c('register_check_terms')],['accepts_marketing',c('register_check_marketing')]].map(([key,label])=>(
+          {[['accepts_terms',c('register_check_terms')],['accepts_marketing',c('register_check_marketing')]].filter(([,label])=>label&&label.trim()).map(([key,label])=>(
             <label key={key} style={{display:'flex',alignItems:'flex-start',gap:'10px',cursor:'pointer'}}>
               <input type="checkbox" checked={form[key]} onChange={e=>setForm({...form,[key]:e.target.checked})} style={{marginTop:'2px',accentColor:'var(--gold)',width:'16px',height:'16px',flexShrink:0}} />
               <span style={{fontSize:'12px',color:'var(--muted)',lineHeight:1.5}} dangerouslySetInnerHTML={{__html:label}} />
