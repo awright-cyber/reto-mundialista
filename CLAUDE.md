@@ -87,13 +87,8 @@ All tables have RLS enabled. Public read on matches, leaderboard, promotions, ap
 | Correct goal difference | 2 pts |
 | Correct goals for one team | 1 pt each |
 
-**Bonus points:**
-- Champion: 20 pts
-- Runner-up: 15 pts
-- Third place: 10 pts
-- Top scorer: 10 pts
-- Revelation team: 5 pts
-- Ecuador advancing each round: 5 pts each
+Maximum per match: 5 pts. Total possible: 104 × 5 = 520 pts.
+No bonus/special predictions — all points come from match predictions only.
 
 ---
 

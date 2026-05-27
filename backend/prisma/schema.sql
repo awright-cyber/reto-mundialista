@@ -212,12 +212,7 @@ INSERT INTO scoring_rules (code, description, points) VALUES
   ('exact_score', 'Marcador exacto', 5),
   ('correct_result', 'Ganador o empate correcto', 3),
   ('correct_diff', 'Diferencia de goles correcta', 2),
-  ('correct_team_goals', 'Goles exactos de un equipo', 1),
-  ('bonus_champion', 'Campeón del Mundial', 20),
-  ('bonus_runner_up', 'Subcampeón', 15),
-  ('bonus_third_place', 'Tercer lugar', 10),
-  ('bonus_top_scorer', 'Goleador del torneo', 10),
-  ('bonus_revelation', 'Equipo revelación', 5);
+  ('correct_team_goals', 'Goles exactos de un equipo', 1);
 
 -- ============================================================
 -- TABLA: achievements base
@@ -405,24 +400,18 @@ BEGIN
     exact_scores, correct_results, total_predictions, accuracy_pct)
   SELECT
     u.id,
-    COALESCE(SUM(p.points_earned), 0) + COALESCE(sp_pts.bonus, 0),
     COALESCE(SUM(p.points_earned), 0),
-    COALESCE(sp_pts.bonus, 0),
+    COALESCE(SUM(p.points_earned), 0),
+    0,
     COALESCE(SUM(CASE WHEN p.exact_score THEN 1 ELSE 0 END), 0),
     COALESCE(SUM(CASE WHEN p.correct_result THEN 1 ELSE 0 END), 0),
     COALESCE(COUNT(p.id), 0),
-    CASE WHEN COUNT(p.id) > 0 
+    CASE WHEN COUNT(p.id) > 0
       THEN ROUND(100.0 * SUM(CASE WHEN p.correct_result OR p.exact_score THEN 1 ELSE 0 END) / COUNT(p.id), 2)
       ELSE 0 END
   FROM users u
   LEFT JOIN predictions p ON p.user_id = u.id AND p.calculated_at IS NOT NULL
-  LEFT JOIN (
-    SELECT user_id,
-      pts_champion + pts_runner_up + pts_third_place +
-      pts_top_scorer + pts_revelation AS bonus
-    FROM special_predictions
-  ) sp_pts ON sp_pts.user_id = u.id
-  GROUP BY u.id, sp_pts.bonus
+  GROUP BY u.id
   ON CONFLICT (user_id) DO UPDATE SET
     total_points = EXCLUDED.total_points,
     match_points = EXCLUDED.match_points,
