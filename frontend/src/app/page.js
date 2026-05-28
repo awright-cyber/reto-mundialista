@@ -424,7 +424,6 @@ function RegistroPage({setPage,setUser,showToast,c}) {
     if (!form.password||form.password.length<6){setError('La contraseña debe tener al menos 6 caracteres');return;}
     if (form.password!==form.confirmPassword){setError('Las contraseñas no coinciden');return;}
     if (c('register_check_terms')&&c('register_check_terms').trim()&&!form.accepts_terms){setError('Debes aceptar los términos y condiciones');return;}
-    if (c('register_check_marketing')&&c('register_check_marketing').trim()&&!form.accepts_marketing){setError('Debes aceptar recibir comunicaciones de Plaza Las Américas');return;}
     setLoading(true);
     try {
       const {data:authData,error:authErr} = await supabase.auth.signUp({email:form.email,password:form.password});
