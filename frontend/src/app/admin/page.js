@@ -34,6 +34,13 @@ const DEFAULT_CONTENT = {
   footer_copyright:'© 2026 Reto Mundialista · Plaza Las Américas · Participación 100% gratuita',
   register_check_terms:'Acepto los <a href="#" style="color:var(--gold)">términos y condiciones</a> del Reto Mundialista Plaza Las Américas',
   register_check_marketing:'Acepto recibir comunicaciones comerciales y promociones de Plaza Las Américas',
+  register_title:'Registro',
+  register_title_highlight:'Gratuito',
+  register_subtitle:'Únete al Reto Mundialista Plaza Las Américas 2026',
+  register_btn_submit:'Registrarme y hacer mis predicciones →',
+  register_btn_loading:'Registrando...',
+  register_login_prompt:'¿Ya tienes cuenta?',
+  register_login_link:'Iniciar sesión',
 };
 
 export default function AdminPage() {
@@ -239,11 +246,21 @@ export default function AdminPage() {
               <F label="WhatsApp / Contacto (dejar vacío para ocultar)" val={s('link_whatsapp')} set={v=>set('link_whatsapp',v)} />
               <F label="Términos y Condiciones (dejar vacío para ocultar)" val={s('link_terms')} set={v=>set('link_terms',v)} />
             </Sec>
-            <Sec title="📝 Registro — Textos legales (acepta HTML para hipervínculos)">
-              <F label='Checkbox 1 — Términos (usa <a href="URL">texto</a> para el link)' val={s('register_check_terms')} set={v=>set('register_check_terms',v)} ta />
-              <F label='Checkbox 2 — Marketing / Comunicaciones' val={s('register_check_marketing')} set={v=>set('register_check_marketing',v)} ta />
+            <Sec title="📝 Registro">
+              <F label="Título (ej: Registro)" val={s('register_title')} set={v=>set('register_title',v)} />
+              <F label="Palabra resaltada en dorado (ej: Gratuito)" val={s('register_title_highlight')} set={v=>set('register_title_highlight',v)} />
+              <F label="Subtítulo" val={s('register_subtitle')} set={v=>set('register_subtitle',v)} />
+              <F label="Texto del botón de registro" val={s('register_btn_submit')} set={v=>set('register_btn_submit',v)} />
+              <F label="Texto del botón mientras carga" val={s('register_btn_loading')} set={v=>set('register_btn_loading',v)} />
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                <F label="Texto '¿Ya tienes cuenta?'" val={s('register_login_prompt')} set={v=>set('register_login_prompt',v)} />
+                <F label="Texto link 'Iniciar sesión'" val={s('register_login_link')} set={v=>set('register_login_link',v)} />
+              </div>
+              <p style={{fontSize:'11px',fontWeight:600,color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px',marginTop:'14px',marginBottom:'8px'}}>Checkboxes (acepta HTML para hipervínculos)</p>
+              <F label='Checkbox 1 — Términos (obligatorio · usa <a href="URL">texto</a> para el link)' val={s('register_check_terms')} set={v=>set('register_check_terms',v)} ta />
+              <F label='Checkbox 2 — Marketing / Comunicaciones (opcional)' val={s('register_check_marketing')} set={v=>set('register_check_marketing',v)} ta />
               <div style={{fontSize:'11px',color:'#8899BB',marginTop:'4px',padding:'8px',background:'rgba(245,197,24,0.05)',borderRadius:'6px',border:'1px solid rgba(245,197,24,0.1)'}}>
-                💡 Puedes usar HTML: <code style={{color:'#F5C518',fontSize:'11px'}}>{'<a href="https://..." style="color:var(--gold)">texto del link</a>'}</code>
+                💡 Puedes usar HTML en los checkboxes: <code style={{color:'#F5C518',fontSize:'11px'}}>{'<a href="https://..." style="color:var(--gold)">texto del link</a>'}</code>
               </div>
             </Sec>
             <Sec title="🦶 Footer — Textos">

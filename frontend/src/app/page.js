@@ -67,6 +67,13 @@ const DEFAULT_CONTENT = {
   footer_copyright:'© 2026 Reto Mundialista · Plaza Las Américas · Participación 100% gratuita',
   register_check_terms:'Acepto los <a href="#" style="color:var(--gold)">términos y condiciones</a> del Reto Mundialista Plaza Las Américas',
   register_check_marketing:'Acepto recibir comunicaciones comerciales y promociones de Plaza Las Américas',
+  register_title:'Registro',
+  register_title_highlight:'Gratuito',
+  register_subtitle:'Únete al Reto Mundialista Plaza Las Américas 2026',
+  register_btn_submit:'Registrarme y hacer mis predicciones →',
+  register_btn_loading:'Registrando...',
+  register_login_prompt:'¿Ya tienes cuenta?',
+  register_login_link:'Iniciar sesión',
 };
 
 function hexToRgb(hex) {
@@ -450,8 +457,8 @@ function RegistroPage({setPage,setUser,showToast,c}) {
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'600px',margin:'0 auto'}}>
-      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Registro <span style={{color:'var(--gold)'}}>Gratuito</span></h2>
-      <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'20px'}}>Únete al Reto Mundialista Plaza Las Américas 2026</p>
+      <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>{c('register_title')} <span style={{color:'var(--gold)'}}>{c('register_title_highlight')}</span></h2>
+      <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'20px'}}>{c('register_subtitle')}</p>
       <div style={{background:'var(--card)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'12px',padding:'20px'}}>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
           {[['Nombre completo','full_name','text','Tu nombre completo'],['Cédula / Pasaporte','cedula','text','0123456789'],['Celular','phone','tel','0991234567'],['Email','email','email','correo@ejemplo.com'],['Ciudad','city','text','Quito'],['Fecha de nacimiento','birth_date','date',''],['Contraseña','password','password','Mínimo 6 caracteres'],['Confirmar contraseña','confirmPassword','password','Repite tu contraseña']].map(([label,key,type,ph])=>(
@@ -472,11 +479,11 @@ function RegistroPage({setPage,setUser,showToast,c}) {
         </div>
         {error && <div style={{marginTop:'12px',background:'rgba(230,57,70,0.1)',border:'1px solid rgba(230,57,70,0.3)',borderRadius:'8px',padding:'10px 12px',fontSize:'13px',color:'var(--red-light)'}}>{error}</div>}
         <button onClick={handleSubmit} disabled={loading} style={{width:'100%',marginTop:'18px',background:loading?'var(--muted)':'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px',borderRadius:'8px',cursor:loading?'not-allowed':'pointer'}}>
-          {loading?'Registrando...':'Registrarme y hacer mis predicciones →'}
+          {loading?c('register_btn_loading'):c('register_btn_submit')}
         </button>
         <p style={{textAlign:'center',marginTop:'16px',fontSize:'13px',color:'var(--muted)'}}>
-          ¿Ya tienes cuenta?{' '}
-          <button onClick={()=>setPage('login')} style={{background:'none',border:'none',color:'var(--gold)',fontWeight:600,cursor:'pointer',fontSize:'13px'}}>Iniciar sesión</button>
+          {c('register_login_prompt')}{' '}
+          <button onClick={()=>setPage('login')} style={{background:'none',border:'none',color:'var(--gold)',fontWeight:600,cursor:'pointer',fontSize:'13px'}}>{c('register_login_link')}</button>
         </p>
       </div>
     </div>
