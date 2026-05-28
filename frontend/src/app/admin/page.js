@@ -87,17 +87,19 @@ export default function AdminPage() {
   };
 
   const savePromo = async (promo) => {
+    let error;
     if (promo.id) {
-      await supabase.from('promotions').update({
+      ({error} = await supabase.from('promotions').update({
         emoji:promo.emoji,store_name:promo.store_name,title:promo.title,
         description:promo.description,image_url:promo.image_url,is_active:promo.is_active,sort_order:promo.sort_order
-      }).eq('id',promo.id);
+      }).eq('id',promo.id));
     } else {
-      await supabase.from('promotions').insert([{
+      ({error} = await supabase.from('promotions').insert([{
         emoji:promo.emoji,store_name:promo.store_name,title:promo.title,
         description:promo.description,image_url:promo.image_url,is_active:true,sort_order:promos.length+1
-      }]);
+      }]));
     }
+    if (error){showMsg(`❌ Error al guardar: ${error.message}`);return;}
     setEditPromo(null);load();showMsg('✅ Promoción guardada');
   };
 

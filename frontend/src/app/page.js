@@ -833,10 +833,10 @@ function PromosPage({c}) {
               onMouseOver={e=>e.currentTarget.style.transform='translateY(-2px)'}
               onMouseOut={e=>e.currentTarget.style.transform='translateY(0)'}>
               {p.image_url ? (
-                <img src={p.image_url} alt={p.title} style={{width:'100%',height:'80px',objectFit:'cover'}} />
-              ) : (
-                <div style={{height:'80px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'36px',background:'rgba(255,255,255,0.03)'}}>{p.emoji||'🏆'}</div>
-              )}
+                <img src={p.image_url} alt={p.title} style={{width:'100%',height:'80px',objectFit:'cover'}}
+                  onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex';}} />
+              ) : null}
+              <div style={{height:'80px',display:p.image_url?'none':'flex',alignItems:'center',justifyContent:'center',fontSize:'36px',background:'rgba(255,255,255,0.03)'}}>{p.emoji||'🏆'}</div>
               <div style={{padding:'10px'}}>
                 <div style={{fontSize:'10px',color:'var(--gold)',fontWeight:600,textTransform:'uppercase'}}>{p.store_name}</div>
                 <div style={{fontSize:'13px',fontWeight:600,marginTop:'2px'}}>{p.title}</div>
