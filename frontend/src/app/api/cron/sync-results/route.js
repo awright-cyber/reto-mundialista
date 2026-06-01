@@ -21,7 +21,6 @@ const STATUS_MAP = {
   'PST':'pending','CANC':'cancelled','ABD':'cancelled'
 };
 
-// Nombres que API-Football devuelve en inglés → versión española en la DB
 const TEAM_NAME_ES = {
   'Germany':'Alemania','Korea Republic':'Corea del Sur','Korea DPR':'Corea del Norte',
   "Cote d'Ivoire":'Costa de Marfil','Ivory Coast':'Costa de Marfil',
@@ -39,6 +38,8 @@ const TEAM_NAME_ES = {
   'Switzerland':'Suiza','Brazil':'Brasil','Tunisia':'Túnez',
   'South Africa':'Sudáfrica','Czech Republic':'República Checa',
   'Canada':'Canadá','Cape Verde':'Cabo Verde','Mexico':'México',
+  'Cape Verde Islands':'Cabo Verde','Türkiye':'Turquía',
+  'Bosnia & Herzegovina':'Bosnia y Herzegovina',
 };
 
 export async function GET(request) {
@@ -46,7 +47,6 @@ export async function GET(request) {
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
   try {
     const result = await syncResults();
     return Response.json({ success: true, ...result });
@@ -97,57 +97,58 @@ async function syncResults() {
 async function processFixture({ fixture, goals, teams, score }) {
   const externalId = String(fixture.id);
   const newStatus = STATUS_MAP[fixture.status.short] || 'pending';
+  const SELECT = 'id,status,score_a,score_b,team_a,team_b,phase,team_a_code,team_b_code,stadium';
 
-  // 1. Buscar por external_id (lo más eficiente, funciona tras el primer mapeo)
+  // 1. Buscar por external_id
   let { data: match } = await supabase
-    .from('matches')
-    .select('id,status,score_a,score_b,team_a,team_b,phase,team_a_code,team_b_code,stadium')
-    .eq('external_id', externalId)
-    .maybeSingle();
+    .from('matches').select(SELECT)
+    .eq('external_id', externalId).maybeSingle();
 
-  // 2. Fallback: buscar por código FIFA de ambos equipos
+  // 2. Fallback por código FIFA — prueba orientación normal e invertida
   if (!match && teams.home.code && teams.away.code) {
-    const { data: m } = await supabase
-      .from('matches')
-      .select('id,status,score_a,score_b,team_a,team_b,phase,team_a_code,team_b_code,stadium')
-      .eq('team_a_code', teams.home.code)
-      .eq('team_b_code', teams.away.code)
-      .maybeSingle();
-    if (m) {
-      await supabase.from('matches').update({ external_id: externalId }).eq('id', m.id);
-      match = m;
+    const hc = teams.home.code, ac = teams.away.code;
+
+    const { data: m1 } = await supabase.from('matches').select(SELECT)
+      .eq('team_a_code', hc).eq('team_b_code', ac).maybeSingle();
+    if (m1) {
+      await supabase.from('matches').update({ external_id: externalId }).eq('id', m1.id);
+      match = m1;
+    } else {
+      // Orientación invertida: API home = DB team_b, API away = DB team_a
+      const { data: m2 } = await supabase.from('matches').select(SELECT)
+        .eq('team_a_code', ac).eq('team_b_code', hc).maybeSingle();
+      if (m2) {
+        await supabase.from('matches').update({ external_id: externalId }).eq('id', m2.id);
+        match = m2;
+      }
     }
   }
 
-  // 3. Fallback: buscar por timestamp del partido (±5 min), desambiguar por código o estadio
+  // 3. Fallback por timestamp ±5 min — desambigua con ambas orientaciones
   if (!match) {
     const kickoff = new Date(fixture.date);
     const from = new Date(kickoff.getTime() - 5 * 60000).toISOString();
     const to   = new Date(kickoff.getTime() + 5 * 60000).toISOString();
+    const hc = teams.home.code, ac = teams.away.code;
 
-    const { data: candidates } = await supabase
-      .from('matches')
-      .select('id,status,score_a,score_b,team_a,team_b,phase,team_a_code,team_b_code,stadium')
-      .gte('scheduled_at', from)
-      .lte('scheduled_at', to);
+    const { data: candidates } = await supabase.from('matches').select(SELECT)
+      .gte('scheduled_at', from).lte('scheduled_at', to);
 
     if (candidates?.length === 1) {
       match = candidates[0];
     } else if (candidates?.length > 1) {
-      // Varios partidos a la misma hora: desambiguar por código de equipo
       match = candidates.find(m =>
-        m.team_a_code === teams.home.code ||
-        m.team_b_code === teams.away.code
+        (m.team_a_code === hc && m.team_b_code === ac) ||
+        (m.team_a_code === ac && m.team_b_code === hc)
       ) || null;
-      // Última opción: por nombre de estadio
+      // Último recurso: estadio
       if (!match && fixture.fixture.venue?.name) {
-        const venue = fixture.fixture.venue.name;
+        const venue = fixture.fixture.venue.name.split(' ')[0].toLowerCase();
         match = candidates.find(m =>
-          m.stadium && m.stadium.toLowerCase().includes(venue.toLowerCase().split(' ')[0])
+          m.stadium && m.stadium.toLowerCase().includes(venue)
         ) || null;
       }
     }
-
     if (match) {
       await supabase.from('matches').update({ external_id: externalId }).eq('id', match.id);
     }
@@ -155,8 +156,19 @@ async function processFixture({ fixture, goals, teams, score }) {
 
   if (!match) return { updated: false, reason: 'match_not_found' };
 
-  // Sin cambios: evitar escritura innecesaria
-  if (match.status === newStatus && match.score_a === goals.home && match.score_b === goals.away) {
+  // Detectar si el API tiene los equipos en orden inverso al de la DB
+  // (API home = DB team_b, API away = DB team_a)
+  const flipped = !!(
+    match.team_a_code && match.team_b_code &&
+    teams.home.code && teams.away.code &&
+    match.team_a_code === teams.away.code &&
+    match.team_b_code === teams.home.code
+  );
+
+  const homeGoals = flipped ? goals.away  : goals.home;
+  const awayGoals = flipped ? goals.home  : goals.away;
+
+  if (match.status === newStatus && match.score_a === homeGoals && match.score_b === awayGoals) {
     return { updated: false };
   }
 
@@ -169,25 +181,27 @@ async function processFixture({ fixture, goals, teams, score }) {
     else if (goals.away > goals.home) winnerCode = teams.away.code;
   }
 
-  // Actualizar equipos TBD (grupos sin asignar aún o fases eliminatorias)
+  // Actualizar equipos TBD respetando la orientación
   const teamUpdates = {};
   if (match.team_a?.startsWith('TBD')) {
-    teamUpdates.team_a = TEAM_NAME_ES[teams.home.name] || teams.home.name;
-    teamUpdates.team_a_code = teams.home.code;
+    const t = flipped ? teams.away : teams.home;
+    teamUpdates.team_a = TEAM_NAME_ES[t.name] || t.name;
+    teamUpdates.team_a_code = t.code;
   }
   if (match.team_b?.startsWith('TBD')) {
-    teamUpdates.team_b = TEAM_NAME_ES[teams.away.name] || teams.away.name;
-    teamUpdates.team_b_code = teams.away.code;
+    const t = flipped ? teams.home : teams.away;
+    teamUpdates.team_b = TEAM_NAME_ES[t.name] || t.name;
+    teamUpdates.team_b_code = t.code;
   }
 
   await supabase.from('matches').update({
     status: newStatus,
-    score_a: goals.home ?? match.score_a,
-    score_b: goals.away ?? match.score_b,
+    score_a: homeGoals ?? match.score_a,
+    score_b: awayGoals ?? match.score_b,
     ...teamUpdates,
     went_to_penalties: wentToPen,
-    penalty_score_a: pen?.home ?? null,
-    penalty_score_b: pen?.away ?? null,
+    penalty_score_a: (flipped ? pen?.away : pen?.home) ?? null,
+    penalty_score_b: (flipped ? pen?.home : pen?.away) ?? null,
     winner_code: winnerCode,
     updated_at: new Date().toISOString()
   }).eq('id', match.id);
