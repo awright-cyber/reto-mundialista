@@ -290,8 +290,15 @@ function Footer({c}) {
 function WelcomePanel({user,setPage}) {
   const [stats,setStats] = useState(null);
   useEffect(()=>{
-    supabase.from('leaderboard').select('total_points,global_rank').eq('user_id',user.id).single()
-      .then(({data})=>setStats(data));
+    const fetchStats = () => {
+      supabase.from('leaderboard').select('total_points,global_rank').eq('user_id',user.id).single()
+        .then(({data})=>setStats(data));
+    };
+    fetchStats();
+    const channel = supabase.channel(`welcome-${user.id}`)
+      .on('postgres_changes',{event:'*',schema:'public',table:'leaderboard',filter:`user_id=eq.${user.id}`},fetchStats)
+      .subscribe();
+    return ()=>{ supabase.removeChannel(channel); };
   },[user.id]);
   const firstName = user.full_name.split(' ')[0];
   return (
@@ -549,6 +556,8 @@ const PHASE_PREV = {
   third_place:'Semifinales', final:'Semifinales'
 };
 
+const PREDICTIONS_LOCK_DATE = new Date('2026-06-11T04:59:00Z');
+
 function PrediccionesPage({user,showToast,c}) {
   const [matches,setMatches] = useState([]);
   const [scores,setScores] = useState({});
@@ -557,6 +566,7 @@ function PrediccionesPage({user,showToast,c}) {
   const [phase,setPhase] = useState('grupos');
   const [loading,setLoading] = useState(true);
   const [saving,setSaving] = useState(false);
+  const isLocked = new Date() > PREDICTIONS_LOCK_DATE;
 
   useEffect(()=>{
     const load = async () => {
@@ -579,6 +589,13 @@ function PrediccionesPage({user,showToast,c}) {
       setLoading(false);
     };
     load();
+    // Actualizar lista de partidos en tiempo real (scores, nombres de equipos TBD)
+    const channel = supabase.channel('matches-updates')
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'matches'},(payload)=>{
+        setMatches(prev=>prev.map(m=>m.id===payload.new.id?{...m,...payload.new}:m));
+      })
+      .subscribe();
+    return ()=>{ supabase.removeChannel(channel); };
   },[user]);
 
   const phases=['grupos','round_of_32','round_of_16','quarterfinals','semifinals','third_place','final'];
@@ -599,6 +616,7 @@ function PrediccionesPage({user,showToast,c}) {
   },[bracket,originalBracket,matches]);
 
   const savePredictions = async () => {
+    if (isLocked){showToast('⛔ El plazo de predicciones está cerrado','var(--red-light)');return;}
     if (!user){showToast('Regístrate primero para guardar tus predicciones','var(--red-light)');return;}
     const missing=filtered.filter(m=>scores[m.id+'_a']===undefined||scores[m.id+'_a']===''||scores[m.id+'_b']===undefined||scores[m.id+'_b']==='');
     if (missing.length>0){showToast(`❌ Faltan ${missing.length} partido(s) sin predicción en esta fase. Completa todos antes de guardar.`,'var(--red-light)');return;}
@@ -638,7 +656,12 @@ function PrediccionesPage({user,showToast,c}) {
     <div style={{padding:'20px',maxWidth:'900px',margin:'0 auto'}}>
       <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'4px'}}>Mis <span style={{color:'var(--gold)'}}>{c('nav_tab_predicciones')}</span></h2>
       <p style={{fontSize:'13px',color:'var(--muted)',marginBottom:'14px'}}>Llena todas las fases antes del 10 de junio · Los equipos de eliminatorias se calculan según tus predicciones de grupos</p>
-      {affectedPhases.length>0&&(
+      {isLocked && (
+        <div style={{background:'rgba(230,57,70,0.12)',border:'1px solid rgba(230,57,70,0.4)',borderRadius:'8px',padding:'12px 16px',marginBottom:'14px',fontSize:'13px',color:'var(--red-light)',fontWeight:600}}>
+          ⛔ El período de predicciones está cerrado. Los resultados se actualizan en tiempo real.
+        </div>
+      )}
+      {affectedPhases.length>0&&!isLocked&&(
         <div style={{background:'rgba(249,115,22,0.1)',border:'1px solid rgba(249,115,22,0.35)',borderRadius:'8px',padding:'10px 14px',marginBottom:'12px',fontSize:'12px',color:'var(--orange)'}}>
           ⚠️ Modificaste predicciones que cambian los equipos clasificados. Las siguientes fases tienen partidos afectados y deben revisarse: <strong>{affectedPhases.join(', ')}</strong>. Guarda cada fase afectada para confirmar los cambios.
         </div>
@@ -685,11 +708,13 @@ function PrediccionesPage({user,showToast,c}) {
                   <span style={{fontWeight:700,fontSize:'13px'}}>{teamB}</span>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
-                  <input type="number" min="0" max="20" placeholder="?" value={scores[m.id+'_a']??''} onChange={e=>setScores(prev=>({...prev,[m.id+'_a']:e.target.value}))}
-                    style={{width:'36px',height:'36px',background:'var(--dark3)',border:`1px solid ${hasA?'rgba(255,255,255,0.12)':'rgba(255,107,122,0.5)'}`,borderRadius:'6px',color:'var(--text)',fontWeight:700,fontSize:'16px',textAlign:'center'}} />
+                  <input type="number" min="0" max="20" placeholder="?" value={scores[m.id+'_a']??''} onChange={e=>!isLocked&&setScores(prev=>({...prev,[m.id+'_a']:e.target.value}))}
+                    disabled={isLocked}
+                    style={{width:'36px',height:'36px',background:isLocked?'var(--dark)':'var(--dark3)',border:`1px solid ${isLocked?'rgba(255,255,255,0.06)':hasA?'rgba(255,255,255,0.12)':'rgba(255,107,122,0.5)'}`,borderRadius:'6px',color:isLocked?'var(--muted)':'var(--text)',fontWeight:700,fontSize:'16px',textAlign:'center',cursor:isLocked?'not-allowed':'text'}} />
                   <span style={{color:'var(--muted)',fontWeight:700}}>-</span>
-                  <input type="number" min="0" max="20" placeholder="?" value={scores[m.id+'_b']??''} onChange={e=>setScores(prev=>({...prev,[m.id+'_b']:e.target.value}))}
-                    style={{width:'36px',height:'36px',background:'var(--dark3)',border:`1px solid ${hasB?'rgba(255,255,255,0.12)':'rgba(255,107,122,0.5)'}`,borderRadius:'6px',color:'var(--text)',fontWeight:700,fontSize:'16px',textAlign:'center'}} />
+                  <input type="number" min="0" max="20" placeholder="?" value={scores[m.id+'_b']??''} onChange={e=>!isLocked&&setScores(prev=>({...prev,[m.id+'_b']:e.target.value}))}
+                    disabled={isLocked}
+                    style={{width:'36px',height:'36px',background:isLocked?'var(--dark)':'var(--dark3)',border:`1px solid ${isLocked?'rgba(255,255,255,0.06)':hasB?'rgba(255,255,255,0.12)':'rgba(255,107,122,0.5)'}`,borderRadius:'6px',color:isLocked?'var(--muted)':'var(--text)',fontWeight:700,fontSize:'16px',textAlign:'center',cursor:isLocked?'not-allowed':'text'}} />
                 </div>
                 <div style={{fontSize:'11px',color:'var(--muted)',textAlign:'right',minWidth:'65px'}}>
                   <div>{new Date(m.scheduled_at).toLocaleDateString('es-EC',{month:'short',day:'numeric',timeZone:'America/Guayaquil'})}</div>
@@ -714,9 +739,11 @@ function PrediccionesPage({user,showToast,c}) {
           {filtered.length===0&&<div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>No hay partidos en esta fase aún</div>}
         </div>
       )}
-      <button onClick={savePredictions} disabled={saving} style={{width:'100%',marginTop:'16px',background:saving?'var(--muted)':'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px',borderRadius:'8px',cursor:saving?'not-allowed':'pointer'}}>
-        {saving?'Guardando...':`💾 Guardar ${c('nav_tab_predicciones')}`}
-      </button>
+      {!isLocked && (
+        <button onClick={savePredictions} disabled={saving} style={{width:'100%',marginTop:'16px',background:saving?'var(--muted)':'var(--gold)',color:'var(--dark)',fontWeight:800,fontSize:'16px',letterSpacing:'1px',textTransform:'uppercase',border:'none',padding:'14px',borderRadius:'8px',cursor:saving?'not-allowed':'pointer'}}>
+          {saving?'Guardando...':`💾 Guardar ${c('nav_tab_predicciones')}`}
+        </button>
+      )}
       <p style={{textAlign:'center',fontSize:'11px',color:'var(--muted)',marginTop:'8px'}}>{c('predictions_lock_notice')}</p>
     </div>
   );
@@ -726,7 +753,16 @@ function DashboardPage({user,setPage,c}) {
   const [stats,setStats] = useState(null);
   useEffect(()=>{
     if (!user) return;
-    supabase.from('leaderboard').select('*').eq('user_id',user.id).single().then(({data})=>setStats(data));
+    const fetchStats = () => {
+      supabase.from('leaderboard').select('*').eq('user_id',user.id).single()
+        .then(({data})=>setStats(data));
+    };
+    fetchStats();
+    // Actualizar mis puntos/ranking en tiempo real cuando el cron recalcula
+    const channel = supabase.channel(`dashboard-${user.id}`)
+      .on('postgres_changes',{event:'*',schema:'public',table:'leaderboard',filter:`user_id=eq.${user.id}`},fetchStats)
+      .subscribe();
+    return ()=>{ supabase.removeChannel(channel); };
   },[user]);
 
   if (!user) return (
@@ -772,8 +808,18 @@ function DashboardPage({user,setPage,c}) {
 function RankingPage({c}) {
   const [ranking,setRanking] = useState([]);
   const [loading,setLoading] = useState(true);
+
   useEffect(()=>{
-    supabase.from('v_leaderboard').select('*').limit(50).then(({data})=>{setRanking(data||[]);setLoading(false);});
+    const fetchRanking = () => {
+      supabase.from('v_leaderboard').select('*').limit(50)
+        .then(({data})=>{setRanking(data||[]);setLoading(false);});
+    };
+    fetchRanking();
+    // Actualizar ranking cuando cambia la tabla leaderboard (puntos nuevos)
+    const channel = supabase.channel('ranking-updates')
+      .on('postgres_changes',{event:'*',schema:'public',table:'leaderboard'},fetchRanking)
+      .subscribe();
+    return ()=>{ supabase.removeChannel(channel); };
   },[]);
 
   return (
