@@ -52,80 +52,48 @@ export async function GET(request) {
       .select('id,scheduled_at,team_a,team_b,team_a_code,team_b_code,external_id,stadium');
     if (dbErr) throw new Error(dbErr.message);
 
-    let mapped = 0, alreadyMapped = 0, notFound = 0;
-    const results = [];
+    // Índices para búsqueda eficiente (normalizados a mayúsculas y sin espacios)
+    const byCodeNormal   = new Map(); // "HOMEcode|AWAYcode" → dbMatch
+    const byCodeReversed = new Map(); // "AWAYcode|HOMEcode" → dbMatch (orientación invertida)
+    for (const m of dbMatches) {
+      const a = (m.team_a_code || '').trim().toUpperCase();
+      const b = (m.team_b_code || '').trim().toUpperCase();
+      if (a && b && a !== 'TBD' && b !== 'TBD') {
+        byCodeNormal.set(`${a}|${b}`, m);
+        byCodeReversed.set(`${b}|${a}`, m); // mismo partido, orden inverso
+      }
+    }
 
+    const results = [];
+    let mapped = 0, alreadyMapped = 0;
+    const unmapped = []; // fixtures que no se resolvieron por código
+
+    // ── PASADA 1: mapeo por código FIFA (orden independiente) ─────────────────
     for (const f of fixtures) {
       const externalId = String(f.fixture.id);
-      const kickoff   = new Date(f.fixture.date);
-      const hc = f.teams.home.code;   // home code según API
-      const ac = f.teams.away.code;   // away code según API
-      const homeName = TEAM_NAME_ES[f.teams.home.name] || f.teams.home.name;
-      const awayName = TEAM_NAME_ES[f.teams.away.name] || f.teams.away.name;
+      const hc = (f.teams.home.code || '').trim().toUpperCase();
+      const ac = (f.teams.away.code || '').trim().toUpperCase();
+      if (!hc || !ac) { unmapped.push(f); continue; }
 
-      // 1. Orientación normal: API home = DB team_a, API away = DB team_b
-      let dbMatch = dbMatches.find(m =>
-        m.team_a_code === hc && m.team_b_code === ac
-      );
-      let flipped = false;
+      // Buscar en orientación normal o invertida
+      const dbMatch = byCodeNormal.get(`${hc}|${ac}`)
+                   || byCodeReversed.get(`${hc}|${ac}`);
 
-      // 2. Orientación invertida: API home = DB team_b, API away = DB team_a
-      if (!dbMatch) {
-        const rev = dbMatches.find(m =>
-          m.team_a_code === ac && m.team_b_code === hc
-        );
-        if (rev) { dbMatch = rev; flipped = true; }
-      }
+      if (!dbMatch) { unmapped.push(f); continue; }
 
-      // 3. Timestamp ±5 min + desambiguación con ambas orientaciones
-      if (!dbMatch) {
-        const candidates = dbMatches.filter(m => {
-          const diff = Math.abs(new Date(m.scheduled_at).getTime() - kickoff.getTime());
-          return diff < 5 * 60000;
-        });
-
-        if (candidates.length === 1) {
-          dbMatch = candidates[0];
-          // Detectar orientación por código si están disponibles
-          if (dbMatch.team_a_code && dbMatch.team_b_code) {
-            flipped = (dbMatch.team_a_code === ac && dbMatch.team_b_code === hc);
-          }
-        } else if (candidates.length > 1) {
-          // Normal
-          let found = candidates.find(m => m.team_a_code === hc && m.team_b_code === ac);
-          if (found) { dbMatch = found; flipped = false; }
-          else {
-            // Invertida
-            found = candidates.find(m => m.team_a_code === ac && m.team_b_code === hc);
-            if (found) { dbMatch = found; flipped = true; }
-          }
-          // Último recurso: estadio
-          if (!dbMatch && f.fixture.venue?.name) {
-            const venue = f.fixture.venue.name.split(' ')[0].toLowerCase();
-            dbMatch = candidates.find(m =>
-              m.stadium && m.stadium.toLowerCase().includes(venue)
-            ) || null;
-          }
-        }
-      }
-
-      if (!dbMatch) {
-        notFound++;
-        results.push({
-          status: 'not_found',
-          api_home: f.teams.home.name, api_away: f.teams.away.name,
-          date: f.fixture.date,
-        });
-        continue;
-      }
+      const flipped = !!byCodeReversed.get(`${hc}|${ac}`) && !byCodeNormal.get(`${hc}|${ac}`);
 
       if (dbMatch.external_id === externalId) {
         alreadyMapped++;
+        // Eliminar del índice para que no lo use otro fixture
+        byCodeNormal.delete(`${hc}|${ac}`);
+        byCodeReversed.delete(`${hc}|${ac}`);
         continue;
       }
 
+      const homeName = TEAM_NAME_ES[f.teams.home.name] || f.teams.home.name;
+      const awayName = TEAM_NAME_ES[f.teams.away.name] || f.teams.away.name;
       const updatePayload = { external_id: externalId };
-      // Solo sobreescribir nombres TBD usando la orientación correcta
       if (!dbMatch.team_a || dbMatch.team_a.startsWith('TBD')) {
         updatePayload.team_a = flipped ? awayName : homeName;
         updatePayload.team_a_code = flipped ? ac : hc;
@@ -135,19 +103,94 @@ export async function GET(request) {
         updatePayload.team_b_code = flipped ? hc : ac;
       }
 
-      const { error: updateErr } = await supabase
-        .from('matches').update(updatePayload).eq('id', dbMatch.id);
-
-      if (updateErr) {
-        results.push({ status: 'error', id: dbMatch.id, error: updateErr.message });
+      const { error: ue } = await supabase.from('matches').update(updatePayload).eq('id', dbMatch.id);
+      if (ue) {
+        results.push({ status: 'error', id: dbMatch.id, error: ue.message });
       } else {
         mapped++;
-        dbMatch.external_id = externalId; // marcar como usado en cache local
+        dbMatch.external_id = externalId;
+        results.push({ status: 'mapped', db_home: dbMatch.team_a, api_home: f.teams.home.name, flipped, externalId });
+      }
+      // Retirar del índice para evitar doble uso
+      byCodeNormal.delete(`${hc}|${ac}`);
+      byCodeReversed.delete(`${hc}|${ac}`);
+    }
+
+    // ── PASADA 2: timestamp para lo que quedó sin mapear por código ───────────
+    // Solo aplica a partidos con equipos TBD en la DB
+    let notFound = 0;
+    for (const f of unmapped) {
+      const externalId = String(f.fixture.id);
+      const kickoff = new Date(f.fixture.date);
+      const hc = (f.teams.home.code || '').trim().toUpperCase();
+      const ac = (f.teams.away.code || '').trim().toUpperCase();
+
+      const candidates = dbMatches.filter(m => {
+        if (m.external_id) return false; // ya mapeado
+        const diff = Math.abs(new Date(m.scheduled_at).getTime() - kickoff.getTime());
+        return diff < 5 * 60000;
+      });
+
+      let dbMatch = null, flipped = false;
+
+      if (candidates.length === 1) {
+        const c = candidates[0];
+        // Solo usar si los códigos son TBD (caso legítimo) o realmente coinciden
+        const isTBD = !c.team_a_code || c.team_a_code === 'TBD';
+        const normalMatch   = c.team_a_code?.toUpperCase() === hc && c.team_b_code?.toUpperCase() === ac;
+        const reversedMatch = c.team_a_code?.toUpperCase() === ac && c.team_b_code?.toUpperCase() === hc;
+        if (isTBD || normalMatch || reversedMatch) {
+          dbMatch = c;
+          flipped = reversedMatch;
+        }
+      } else if (candidates.length > 1) {
+        let found = candidates.find(m => m.team_a_code?.toUpperCase() === hc && m.team_b_code?.toUpperCase() === ac);
+        if (found) { dbMatch = found; flipped = false; }
+        else {
+          found = candidates.find(m => m.team_a_code?.toUpperCase() === ac && m.team_b_code?.toUpperCase() === hc);
+          if (found) { dbMatch = found; flipped = true; }
+        }
+        if (!dbMatch && f.fixture.venue?.name) {
+          const venue = f.fixture.venue.name.split(' ')[0].toLowerCase();
+          dbMatch = candidates.find(m => m.stadium?.toLowerCase().includes(venue)) || null;
+        }
+      }
+
+      if (!dbMatch) {
+        notFound++;
+        // Info de diagnóstico: qué códigos buscamos y qué hay en la DB a esa hora
+        const nearby = dbMatches
+          .filter(m => Math.abs(new Date(m.scheduled_at).getTime() - kickoff.getTime()) < 10 * 60000)
+          .map(m => ({ ta_code: m.team_a_code, tb_code: m.team_b_code, ext: m.external_id || null }));
         results.push({
-          status: 'mapped',
-          db_home: dbMatch.team_a, api_home: f.teams.home.name,
-          flipped, externalId,
+          status: 'not_found',
+          api_home: f.teams.home.name, api_away: f.teams.away.name,
+          searched_hc: hc, searched_ac: ac,
+          date: f.fixture.date,
+          nearby_db_matches: nearby,
         });
+        continue;
+      }
+
+      const homeName = TEAM_NAME_ES[f.teams.home.name] || f.teams.home.name;
+      const awayName = TEAM_NAME_ES[f.teams.away.name] || f.teams.away.name;
+      const updatePayload = { external_id: externalId };
+      if (!dbMatch.team_a || dbMatch.team_a.startsWith('TBD')) {
+        updatePayload.team_a = flipped ? awayName : homeName;
+        updatePayload.team_a_code = flipped ? ac : hc;
+      }
+      if (!dbMatch.team_b || dbMatch.team_b.startsWith('TBD')) {
+        updatePayload.team_b = flipped ? homeName : awayName;
+        updatePayload.team_b_code = flipped ? hc : ac;
+      }
+
+      const { error: ue } = await supabase.from('matches').update(updatePayload).eq('id', dbMatch.id);
+      if (ue) {
+        results.push({ status: 'error', id: dbMatch.id, error: ue.message });
+      } else {
+        mapped++;
+        dbMatch.external_id = externalId;
+        results.push({ status: 'mapped_by_time', db_home: dbMatch.team_a, api_home: f.teams.home.name, flipped, externalId });
       }
     }
 
