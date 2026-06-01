@@ -42,6 +42,12 @@ const TEAM_NAME_ES = {
   'South Korea':'Corea del Sur','Bosnia & Herzegovina':'Bosnia y Herzegovina',
 };
 
+// Normalizar nombre: mayúsculas + sin tildes
+function normStr(s) {
+  return (s || '').trim().toUpperCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
 export async function GET(request) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -157,13 +163,13 @@ async function processFixture({ fixture, goals, teams, score }) {
 
   if (!match) return { updated: false, reason: 'match_not_found' };
 
-  // Detectar si el API tiene los equipos en orden inverso al de la DB
-  // (API home = DB team_b, API away = DB team_a)
+  // Detectar orientación invertida por nombre (API /fixtures no devuelve code)
+  // Caso: API home = DB team_b (ej: API tiene Curaçao como home, DB tiene Ecuador como team_a)
+  const homeNameES = normStr(TEAM_NAME_ES[teams.home.name] || teams.home.name);
   const flipped = !!(
-    match.team_a_code && match.team_b_code &&
-    teams.home.code && teams.away.code &&
-    match.team_a_code === teams.away.code &&
-    match.team_b_code === teams.home.code
+    match.team_a && match.team_b &&
+    normStr(match.team_a) !== homeNameES &&
+    normStr(match.team_b) === homeNameES
   );
 
   const homeGoals = flipped ? goals.away  : goals.home;
@@ -187,16 +193,17 @@ async function processFixture({ fixture, goals, teams, score }) {
   }
 
   // Actualizar equipos TBD respetando la orientación
+  // No actualizar team_a_code/team_b_code si el API no devuelve el código (evita borrar el existente)
   const teamUpdates = {};
   if (match.team_a?.startsWith('TBD')) {
     const t = flipped ? teams.away : teams.home;
     teamUpdates.team_a = TEAM_NAME_ES[t.name] || t.name;
-    teamUpdates.team_a_code = t.code;
+    if (t.code) teamUpdates.team_a_code = t.code;
   }
   if (match.team_b?.startsWith('TBD')) {
     const t = flipped ? teams.home : teams.away;
     teamUpdates.team_b = TEAM_NAME_ES[t.name] || t.name;
-    teamUpdates.team_b_code = t.code;
+    if (t.code) teamUpdates.team_b_code = t.code;
   }
 
   await supabase.from('matches').update({
