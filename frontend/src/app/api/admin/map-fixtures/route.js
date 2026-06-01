@@ -13,8 +13,10 @@ const API_KEY = process.env.API_FOOTBALL_KEY;
 const FIFA_LEAGUE_ID = 1;
 const SEASON = 2026;
 
+// API-Football (inglés) → nombre en la DB (español)
 const TEAM_NAME_ES = {
   'Germany':'Alemania','Korea Republic':'Corea del Sur','Korea DPR':'Corea del Norte',
+  'South Korea':'Corea del Sur',                          // alias alternativo API
   "Cote d'Ivoire":'Costa de Marfil','Ivory Coast':'Costa de Marfil',
   'Netherlands':'Países Bajos','Japan':'Japón','Sweden':'Suecia',
   'Belgium':'Bélgica','Egypt':'Egipto','Iran':'Irán',
@@ -25,14 +27,29 @@ const TEAM_NAME_ES = {
   'Saudi Arabia':'Arabia Saudita','France':'Francia',
   'Iraq':'Irak','Norway':'Noruega',
   'United States':'Estados Unidos','USA':'Estados Unidos',
-  'Turkey':'Turquía','Curacao':'Curazao','Haiti':'Haití',
-  'Scotland':'Escocia','Bosnia':'Bosnia y Herzegovina','Qatar':'Catar',
-  'Switzerland':'Suiza','Brazil':'Brasil','Tunisia':'Túnez',
+  'Turkey':'Turquía','Türkiye':'Turquía',
+  'Curacao':'Curazao','Curaçao':'Curazao',                // con y sin cedilla
+  'Haiti':'Haití','Scotland':'Escocia',
+  'Bosnia':'Bosnia y Herzegovina','Bosnia & Herzegovina':'Bosnia y Herzegovina',
+  'Qatar':'Catar','Switzerland':'Suiza','Brazil':'Brasil','Tunisia':'Túnez',
   'South Africa':'Sudáfrica','Czech Republic':'República Checa',
-  'Canada':'Canadá','Cape Verde':'Cabo Verde','Mexico':'México',
-  'Cape Verde Islands':'Cabo Verde','Türkiye':'Turquía',
-  'Bosnia & Herzegovina':'Bosnia y Herzegovina',
+  'Canada':'Canadá','Cape Verde':'Cabo Verde','Cape Verde Islands':'Cabo Verde',
+  'Mexico':'México','Ghana':'Ghana','Colombia':'Colombia',
+  'Portugal':'Portugal','Argentina':'Argentina','Uruguay':'Uruguay',
+  'Senegal':'Senegal','Ecuador':'Ecuador','Paraguay':'Paraguay',
+  'Australia':'Australia','Austria':'Austria',
+  'Costa Rica':'Costa Rica','Croatia':'Croacia',
 };
+
+// Normalizar: mayúsculas + sin tildes/diacríticos
+function norm(s) {
+  return (s || '').trim().toUpperCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function toES(apiName) {
+  return TEAM_NAME_ES[apiName] || apiName;
+}
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -52,55 +69,45 @@ export async function GET(request) {
       .select('id,scheduled_at,team_a,team_b,team_a_code,team_b_code,external_id,stadium');
     if (dbErr) throw new Error(dbErr.message);
 
-    // Índices para búsqueda eficiente (normalizados a mayúsculas y sin espacios)
-    const byCodeNormal   = new Map(); // "HOMEcode|AWAYcode" → dbMatch
-    const byCodeReversed = new Map(); // "AWAYcode|HOMEcode" → dbMatch (orientación invertida)
+    // ── Índice por nombre normalizado en español ──────────────────────────────
+    // Clave: "NORM_A|NORM_B" → { match, flipped }
+    const byName = new Map();
     for (const m of dbMatches) {
-      const a = (m.team_a_code || '').trim().toUpperCase();
-      const b = (m.team_b_code || '').trim().toUpperCase();
-      if (a && b && a !== 'TBD' && b !== 'TBD') {
-        byCodeNormal.set(`${a}|${b}`, m);
-        byCodeReversed.set(`${b}|${a}`, m); // mismo partido, orden inverso
-      }
+      if (!m.team_a || m.team_a.startsWith('TBD')) continue;
+      if (!m.team_b || m.team_b.startsWith('TBD')) continue;
+      const na = norm(m.team_a), nb = norm(m.team_b);
+      if (!byName.has(`${na}|${nb}`)) byName.set(`${na}|${nb}`, { match: m, flipped: false });
+      if (!byName.has(`${nb}|${na}`)) byName.set(`${nb}|${na}`, { match: m, flipped: true });
     }
 
     const results = [];
-    let mapped = 0, alreadyMapped = 0;
-    const unmapped = []; // fixtures que no se resolvieron por código
+    let mapped = 0, alreadyMapped = 0, notFound = 0;
 
-    // ── PASADA 1: mapeo por código FIFA (orden independiente) ─────────────────
+    // ── PASADA 1: mapeo por nombre (independiente del orden del API) ──────────
+    const unmapped = [];
     for (const f of fixtures) {
       const externalId = String(f.fixture.id);
-      const hc = (f.teams.home.code || '').trim().toUpperCase();
-      const ac = (f.teams.away.code || '').trim().toUpperCase();
-      if (!hc || !ac) { unmapped.push(f); continue; }
+      const hn = norm(toES(f.teams.home.name));
+      const an = norm(toES(f.teams.away.name));
 
-      // Buscar en orientación normal o invertida
-      const dbMatch = byCodeNormal.get(`${hc}|${ac}`)
-                   || byCodeReversed.get(`${hc}|${ac}`);
+      const found = byName.get(`${hn}|${an}`);
+      if (!found) { unmapped.push(f); continue; }
 
-      if (!dbMatch) { unmapped.push(f); continue; }
-
-      const flipped = !!byCodeReversed.get(`${hc}|${ac}`) && !byCodeNormal.get(`${hc}|${ac}`);
+      const { match: dbMatch, flipped } = found;
 
       if (dbMatch.external_id === externalId) {
         alreadyMapped++;
-        // Eliminar del índice para que no lo use otro fixture
-        byCodeNormal.delete(`${hc}|${ac}`);
-        byCodeReversed.delete(`${hc}|${ac}`);
+        byName.delete(`${hn}|${an}`);
+        byName.delete(`${an}|${hn}`);
         continue;
       }
 
-      const homeName = TEAM_NAME_ES[f.teams.home.name] || f.teams.home.name;
-      const awayName = TEAM_NAME_ES[f.teams.away.name] || f.teams.away.name;
       const updatePayload = { external_id: externalId };
       if (!dbMatch.team_a || dbMatch.team_a.startsWith('TBD')) {
-        updatePayload.team_a = flipped ? awayName : homeName;
-        updatePayload.team_a_code = flipped ? ac : hc;
+        updatePayload.team_a = flipped ? toES(f.teams.away.name) : toES(f.teams.home.name);
       }
       if (!dbMatch.team_b || dbMatch.team_b.startsWith('TBD')) {
-        updatePayload.team_b = flipped ? homeName : awayName;
-        updatePayload.team_b_code = flipped ? hc : ac;
+        updatePayload.team_b = flipped ? toES(f.teams.home.name) : toES(f.teams.away.name);
       }
 
       const { error: ue } = await supabase.from('matches').update(updatePayload).eq('id', dbMatch.id);
@@ -109,24 +116,21 @@ export async function GET(request) {
       } else {
         mapped++;
         dbMatch.external_id = externalId;
+        byName.delete(`${hn}|${an}`);
+        byName.delete(`${an}|${hn}`);
         results.push({ status: 'mapped', db_home: dbMatch.team_a, api_home: f.teams.home.name, flipped, externalId });
       }
-      // Retirar del índice para evitar doble uso
-      byCodeNormal.delete(`${hc}|${ac}`);
-      byCodeReversed.delete(`${hc}|${ac}`);
     }
 
-    // ── PASADA 2: timestamp para lo que quedó sin mapear por código ───────────
-    // Solo aplica a partidos con equipos TBD en la DB
-    let notFound = 0;
+    // ── PASADA 2: timestamp para TBD (equipos sin nombre aún en DB) ──────────
     for (const f of unmapped) {
       const externalId = String(f.fixture.id);
       const kickoff = new Date(f.fixture.date);
-      const hc = (f.teams.home.code || '').trim().toUpperCase();
-      const ac = (f.teams.away.code || '').trim().toUpperCase();
+      const hn = norm(toES(f.teams.home.name));
+      const an = norm(toES(f.teams.away.name));
 
       const candidates = dbMatches.filter(m => {
-        if (m.external_id) return false; // ya mapeado
+        if (m.external_id && m.external_id !== externalId) return false;
         const diff = Math.abs(new Date(m.scheduled_at).getTime() - kickoff.getTime());
         return diff < 5 * 60000;
       });
@@ -135,53 +139,42 @@ export async function GET(request) {
 
       if (candidates.length === 1) {
         const c = candidates[0];
-        // Solo usar si los códigos son TBD (caso legítimo) o realmente coinciden
-        const isTBD = !c.team_a_code || c.team_a_code === 'TBD';
-        const normalMatch   = c.team_a_code?.toUpperCase() === hc && c.team_b_code?.toUpperCase() === ac;
-        const reversedMatch = c.team_a_code?.toUpperCase() === ac && c.team_b_code?.toUpperCase() === hc;
+        const na = norm(c.team_a), nb = norm(c.team_b);
+        const isTBD = c.team_a?.startsWith('TBD') || c.team_b?.startsWith('TBD');
+        const normalMatch   = na === hn && nb === an;
+        const reversedMatch = na === an && nb === hn;
         if (isTBD || normalMatch || reversedMatch) {
           dbMatch = c;
-          flipped = reversedMatch;
+          flipped = reversedMatch && !normalMatch;
         }
       } else if (candidates.length > 1) {
-        let found = candidates.find(m => m.team_a_code?.toUpperCase() === hc && m.team_b_code?.toUpperCase() === ac);
-        if (found) { dbMatch = found; flipped = false; }
+        let c = candidates.find(m => norm(m.team_a) === hn && norm(m.team_b) === an);
+        if (c) { dbMatch = c; flipped = false; }
         else {
-          found = candidates.find(m => m.team_a_code?.toUpperCase() === ac && m.team_b_code?.toUpperCase() === hc);
-          if (found) { dbMatch = found; flipped = true; }
-        }
-        if (!dbMatch && f.fixture.venue?.name) {
-          const venue = f.fixture.venue.name.split(' ')[0].toLowerCase();
-          dbMatch = candidates.find(m => m.stadium?.toLowerCase().includes(venue)) || null;
+          c = candidates.find(m => norm(m.team_a) === an && norm(m.team_b) === hn);
+          if (c) { dbMatch = c; flipped = true; }
         }
       }
 
       if (!dbMatch) {
         notFound++;
-        // Info de diagnóstico: qué códigos buscamos y qué hay en la DB a esa hora
-        const nearby = dbMatches
-          .filter(m => Math.abs(new Date(m.scheduled_at).getTime() - kickoff.getTime()) < 10 * 60000)
-          .map(m => ({ ta_code: m.team_a_code, tb_code: m.team_b_code, ext: m.external_id || null }));
         results.push({
           status: 'not_found',
           api_home: f.teams.home.name, api_away: f.teams.away.name,
-          searched_hc: hc, searched_ac: ac,
+          searched_home_es: toES(f.teams.home.name),
+          searched_away_es: toES(f.teams.away.name),
           date: f.fixture.date,
-          nearby_db_matches: nearby,
+          candidates: candidates.map(m => ({ ta: m.team_a, tb: m.team_b })),
         });
         continue;
       }
 
-      const homeName = TEAM_NAME_ES[f.teams.home.name] || f.teams.home.name;
-      const awayName = TEAM_NAME_ES[f.teams.away.name] || f.teams.away.name;
       const updatePayload = { external_id: externalId };
       if (!dbMatch.team_a || dbMatch.team_a.startsWith('TBD')) {
-        updatePayload.team_a = flipped ? awayName : homeName;
-        updatePayload.team_a_code = flipped ? ac : hc;
+        updatePayload.team_a = flipped ? toES(f.teams.away.name) : toES(f.teams.home.name);
       }
       if (!dbMatch.team_b || dbMatch.team_b.startsWith('TBD')) {
-        updatePayload.team_b = flipped ? homeName : awayName;
-        updatePayload.team_b_code = flipped ? hc : ac;
+        updatePayload.team_b = flipped ? toES(f.teams.home.name) : toES(f.teams.away.name);
       }
 
       const { error: ue } = await supabase.from('matches').update(updatePayload).eq('id', dbMatch.id);

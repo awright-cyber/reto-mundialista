@@ -104,19 +104,20 @@ async function processFixture({ fixture, goals, teams, score }) {
     .from('matches').select(SELECT)
     .eq('external_id', externalId).maybeSingle();
 
-  // 2. Fallback por código FIFA — prueba orientación normal e invertida
-  if (!match && teams.home.code && teams.away.code) {
-    const hc = teams.home.code, ac = teams.away.code;
+  // 2. Fallback por nombre de equipo (el API /fixtures no devuelve código FIFA)
+  if (!match) {
+    const homeName = TEAM_NAME_ES[teams.home.name] || teams.home.name;
+    const awayName = TEAM_NAME_ES[teams.away.name] || teams.away.name;
 
     const { data: m1 } = await supabase.from('matches').select(SELECT)
-      .eq('team_a_code', hc).eq('team_b_code', ac).maybeSingle();
+      .ilike('team_a', homeName).ilike('team_b', awayName).maybeSingle();
     if (m1) {
       await supabase.from('matches').update({ external_id: externalId }).eq('id', m1.id);
       match = m1;
     } else {
-      // Orientación invertida: API home = DB team_b, API away = DB team_a
+      // Orientación invertida
       const { data: m2 } = await supabase.from('matches').select(SELECT)
-        .eq('team_a_code', ac).eq('team_b_code', hc).maybeSingle();
+        .ilike('team_a', awayName).ilike('team_b', homeName).maybeSingle();
       if (m2) {
         await supabase.from('matches').update({ external_id: externalId }).eq('id', m2.id);
         match = m2;
@@ -174,11 +175,15 @@ async function processFixture({ fixture, goals, teams, score }) {
 
   const pen = score?.penalty;
   const wentToPen = pen?.home !== null && pen?.home !== undefined;
+  // Usar códigos de la DB (el API /fixtures no devuelve código en el objeto team)
+  const teamACode = match.team_a_code;
+  const teamBCode = match.team_b_code;
   let winnerCode = null;
   if (newStatus === 'finished') {
-    if (wentToPen) winnerCode = pen.home > pen.away ? teams.home.code : teams.away.code;
-    else if (goals.home > goals.away) winnerCode = teams.home.code;
-    else if (goals.away > goals.home) winnerCode = teams.away.code;
+    const homeWins = wentToPen ? pen.home > pen.away : homeGoals > awayGoals;
+    const awayWins = wentToPen ? pen.away > pen.home : awayGoals > homeGoals;
+    if (homeWins) winnerCode = flipped ? teamBCode : teamACode;
+    else if (awayWins) winnerCode = flipped ? teamACode : teamBCode;
   }
 
   // Actualizar equipos TBD respetando la orientación
