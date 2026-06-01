@@ -74,9 +74,6 @@ export async function GET(request) {
 
   // ── 5. Columnas en tabla predictions ─────────────────────────────────────
   try {
-    const { data } = await supabase.rpc('get_predictions_columns').maybeSingle()
-      .catch(() => ({ data: null }));
-    // Alternativa directa: intentar leer con esas columnas
     const { error } = await supabase
       .from('predictions')
       .select('tiebreaker, predicted_team_a, predicted_team_b')
