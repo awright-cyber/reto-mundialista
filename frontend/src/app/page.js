@@ -435,6 +435,8 @@ function RegistroPage({setPage,setUser,showToast,c}) {
   const handleSubmit = async () => {
     setError('');
     if (!form.full_name||!form.cedula||!form.email||!form.phone||!form.city||!form.birth_date){setError('Por favor llena todos los campos');return;}
+    if (form.full_name.includes('@')||form.full_name.includes('http')){setError('El nombre no puede contener un correo electrónico ni URL');return;}
+    if (form.full_name.trim().split(/\s+/).length<2){setError('Por favor ingresa tu nombre y apellido completos');return;}
     if (!form.password||form.password.length<6){setError('La contraseña debe tener al menos 6 caracteres');return;}
     if (form.password!==form.confirmPassword){setError('Las contraseñas no coinciden');return;}
     if (c('register_check_terms')&&c('register_check_terms').trim()&&!form.accepts_terms){setError('Debes aceptar los términos y condiciones');return;}
@@ -832,7 +834,7 @@ function RankingPage({c}) {
             <div key={r.user_id} style={{display:'flex',alignItems:'center',gap:'12px',background:'var(--card)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'8px',padding:'10px 14px'}}>
               <span style={{fontWeight:800,fontSize:'20px',color:i<3?'var(--gold)':'var(--muted)',width:'28px',textAlign:'center',flexShrink:0}}>{r.global_rank}</span>
               <div style={{flex:1}}>
-                <div style={{fontSize:'14px',fontWeight:500}}>{r.full_name}</div>
+                <div style={{fontSize:'14px',fontWeight:500}}>{r.full_name&&!r.full_name.includes('@')?r.full_name:'Participante'}</div>
                 <div style={{fontSize:'11px',color:'var(--muted)'}}>{r.city}</div>
               </div>
               <span style={{fontSize:'11px',fontWeight:600,color:r.rank_change>0?'var(--green)':r.rank_change<0?'var(--red)':'var(--muted)'}}>
