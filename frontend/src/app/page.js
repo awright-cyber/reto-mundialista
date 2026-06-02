@@ -556,15 +556,21 @@ function computeBracket(matches, scores, tiebreakers) {
   });
   const b = {};
   const letters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  const sortByPerf = (a, bv) => bv.pts-a.pts || bv.gd-a.gd || bv.gf-a.gf || a.name.localeCompare(bv.name);
+  const firsts = [], seconds = [], thirds = [];
   letters.forEach(l => {
     const t = sorted[`Grupo ${l}`] || [];
-    b[`TBD-1${l}`] = t[0]?.name || `1° Grupo ${l}`;
-    b[`TBD-2${l}`] = t[1]?.name || `2° Grupo ${l}`;
+    firsts.push(t[0] || {name:`1° Grupo ${l}`, pts:0, gd:0, gf:0});
+    seconds.push(t[1] || {name:`2° Grupo ${l}`, pts:0, gd:0, gf:0});
+    thirds.push(t[2] || {name:`3° Grupo ${l}`, pts:0, gd:0, gf:0});
   });
-  const thirds = letters
-    .map(l => sorted[`Grupo ${l}`]?.[2] || {name:`3° Grupo ${l}`, pts:0, gd:0, gf:0})
-    .sort((a,bv) => bv.pts-a.pts || bv.gd-a.gd || bv.gf-a.gf || a.name.localeCompare(bv.name));
-  thirds.slice(0,8).forEach((t,i) => { b[`TBD-W${i+1}`] = t.name || `Mejor 3° #${i+1}`; });
+  firsts.sort(sortByPerf);
+  seconds.sort(sortByPerf);
+  thirds.sort(sortByPerf);
+  // Ranking global: F1-F12 (mejores primeros), S1-S12 (mejores segundos), W1-W8 (mejores terceros)
+  firsts.forEach((t,i) => { b[`TBD-F${i+1}`] = t.name; });
+  seconds.forEach((t,i) => { b[`TBD-S${i+1}`] = t.name; });
+  thirds.slice(0,8).forEach((t,i) => { b[`TBD-W${i+1}`] = t.name; });
   const propagate = (phase, prefix) => {
     matches.filter(m => m.phase===phase).sort((a,bv) => a.match_number-bv.match_number).forEach((m,i) => {
       const tA=b[m.team_a]||m.team_a, tB=b[m.team_b]||m.team_b;

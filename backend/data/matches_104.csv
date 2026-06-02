@@ -71,22 +71,22 @@ match_number,phase,group_name,team_a,team_b,team_a_code,team_b_code,scheduled_at
 70,grupos,Grupo K,TBD-K2,TBD-K3,TBD,TBD,2026-06-28T21:00:00Z,MetLife Stadium,East Rutherford,USA
 71,grupos,Grupo L,TBD-L1,TBD-L4,TBD,TBD,2026-06-29T21:00:00Z,AT&T Stadium,Dallas,USA
 72,grupos,Grupo L,TBD-L2,TBD-L3,TBD,TBD,2026-06-29T21:00:00Z,SoFi Stadium,Los Ángeles,USA
-73,round_of_32,Round of 32,TBD-1A,TBD-2B,TBD,TBD,2026-07-01T20:00:00Z,MetLife Stadium,East Rutherford,USA
-74,round_of_32,Round of 32,TBD-1B,TBD-2A,TBD,TBD,2026-07-01T23:00:00Z,AT&T Stadium,Dallas,USA
-75,round_of_32,Round of 32,TBD-1C,TBD-2D,TBD,TBD,2026-07-02T20:00:00Z,SoFi Stadium,Los Ángeles,USA
-76,round_of_32,Round of 32,TBD-1D,TBD-2C,TBD,TBD,2026-07-02T23:00:00Z,Rose Bowl,Los Ángeles,USA
-77,round_of_32,Round of 32,TBD-1E,TBD-2F,TBD,TBD,2026-07-03T20:00:00Z,Levi's Stadium,San Francisco,USA
-78,round_of_32,Round of 32,TBD-1F,TBD-2E,TBD,TBD,2026-07-03T23:00:00Z,Arrowhead Stadium,Kansas City,USA
-79,round_of_32,Round of 32,TBD-1G,TBD-2H,TBD,TBD,2026-07-04T20:00:00Z,Gillette Stadium,Boston,USA
-80,round_of_32,Round of 32,TBD-1H,TBD-2G,TBD,TBD,2026-07-04T23:00:00Z,Lincoln Financial Field,Filadelfia,USA
-81,round_of_32,Round of 32,TBD-1I,TBD-2J,TBD,TBD,2026-07-05T20:00:00Z,Hard Rock Stadium,Miami,USA
-82,round_of_32,Round of 32,TBD-1J,TBD-2I,TBD,TBD,2026-07-05T23:00:00Z,MetLife Stadium,East Rutherford,USA
-83,round_of_32,Round of 32,TBD-1K,TBD-2L,TBD,TBD,2026-07-06T20:00:00Z,AT&T Stadium,Dallas,USA
-84,round_of_32,Round of 32,TBD-1L,TBD-2K,TBD,TBD,2026-07-06T23:00:00Z,SoFi Stadium,Los Ángeles,USA
-85,round_of_32,Round of 32,TBD-W1,TBD-W2,TBD,TBD,2026-07-07T20:00:00Z,Rose Bowl,Los Ángeles,USA
-86,round_of_32,Round of 32,TBD-W3,TBD-W4,TBD,TBD,2026-07-07T23:00:00Z,Levi's Stadium,San Francisco,USA
-87,round_of_32,Round of 32,TBD-W5,TBD-W6,TBD,TBD,2026-07-08T20:00:00Z,Arrowhead Stadium,Kansas City,USA
-88,round_of_32,Round of 32,TBD-W7,TBD-W8,TBD,TBD,2026-07-08T23:00:00Z,Gillette Stadium,Boston,USA
+73,round_of_32,Round of 32,TBD-F1,TBD-W1,TBD,TBD,2026-07-01T20:00:00Z,MetLife Stadium,East Rutherford,USA
+74,round_of_32,Round of 32,TBD-F2,TBD-W2,TBD,TBD,2026-07-01T23:00:00Z,AT&T Stadium,Dallas,USA
+75,round_of_32,Round of 32,TBD-F3,TBD-W3,TBD,TBD,2026-07-02T20:00:00Z,SoFi Stadium,Los Ángeles,USA
+76,round_of_32,Round of 32,TBD-F4,TBD-W4,TBD,TBD,2026-07-02T23:00:00Z,Rose Bowl,Los Ángeles,USA
+77,round_of_32,Round of 32,TBD-F5,TBD-W5,TBD,TBD,2026-07-03T20:00:00Z,Levi's Stadium,San Francisco,USA
+78,round_of_32,Round of 32,TBD-F6,TBD-W6,TBD,TBD,2026-07-03T23:00:00Z,Arrowhead Stadium,Kansas City,USA
+79,round_of_32,Round of 32,TBD-F7,TBD-W7,TBD,TBD,2026-07-04T20:00:00Z,Gillette Stadium,Boston,USA
+80,round_of_32,Round of 32,TBD-F8,TBD-W8,TBD,TBD,2026-07-04T23:00:00Z,Lincoln Financial Field,Filadelfia,USA
+81,round_of_32,Round of 32,TBD-F9,TBD-S1,TBD,TBD,2026-07-05T20:00:00Z,Hard Rock Stadium,Miami,USA
+82,round_of_32,Round of 32,TBD-F10,TBD-S2,TBD,TBD,2026-07-05T23:00:00Z,MetLife Stadium,East Rutherford,USA
+83,round_of_32,Round of 32,TBD-F11,TBD-S3,TBD,TBD,2026-07-06T20:00:00Z,AT&T Stadium,Dallas,USA
+84,round_of_32,Round of 32,TBD-F12,TBD-S4,TBD,TBD,2026-07-06T23:00:00Z,SoFi Stadium,Los Ángeles,USA
+85,round_of_32,Round of 32,TBD-S5,TBD-S6,TBD,TBD,2026-07-07T20:00:00Z,Rose Bowl,Los Ángeles,USA
+86,round_of_32,Round of 32,TBD-S7,TBD-S8,TBD,TBD,2026-07-07T23:00:00Z,Levi's Stadium,San Francisco,USA
+87,round_of_32,Round of 32,TBD-S9,TBD-S10,TBD,TBD,2026-07-08T20:00:00Z,Arrowhead Stadium,Kansas City,USA
+88,round_of_32,Round of 32,TBD-S11,TBD-S12,TBD,TBD,2026-07-08T23:00:00Z,Gillette Stadium,Boston,USA
 89,round_of_16,Octavos,TBD-R32-W1,TBD-R32-W3,TBD,TBD,2026-07-11T20:00:00Z,MetLife Stadium,East Rutherford,USA
 90,round_of_16,Octavos,TBD-R32-W2,TBD-R32-W4,TBD,TBD,2026-07-11T23:00:00Z,AT&T Stadium,Dallas,USA
 91,round_of_16,Octavos,TBD-R32-W5,TBD-R32-W7,TBD,TBD,2026-07-12T20:00:00Z,SoFi Stadium,Los Ángeles,USA
