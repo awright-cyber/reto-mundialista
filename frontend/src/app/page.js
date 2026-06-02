@@ -500,24 +500,59 @@ function RegistroPage({setPage,setUser,showToast,c}) {
 }
 
 function computeBracket(matches, scores, tiebreakers) {
+  const groupMatchData = {};
   const standings = {};
   matches.filter(m => m.phase === 'grupos').forEach(m => {
     const rawA = scores[m.id+'_a'], rawB = scores[m.id+'_b'];
-    if (rawA === undefined || rawA === '' || rawB === undefined || rawB === '') return;
     const g = m.group_name;
+    if (!groupMatchData[g]) groupMatchData[g] = [];
     if (!standings[g]) standings[g] = {};
     if (!standings[g][m.team_a]) standings[g][m.team_a] = {name:m.team_a, code:m.team_a_code, pts:0, gf:0, ga:0, gd:0};
     if (!standings[g][m.team_b]) standings[g][m.team_b] = {name:m.team_b, code:m.team_b_code, pts:0, gf:0, ga:0, gd:0};
+    if (rawA === undefined || rawA === '' || rawB === undefined || rawB === '') {
+      groupMatchData[g].push({a:m.team_a, b:m.team_b, sa:null, sb:null});
+      return;
+    }
     const sa = parseInt(rawA), sb = parseInt(rawB);
+    groupMatchData[g].push({a:m.team_a, b:m.team_b, sa, sb});
     standings[g][m.team_a].gf+=sa; standings[g][m.team_a].ga+=sb; standings[g][m.team_a].gd+=sa-sb;
     standings[g][m.team_b].gf+=sb; standings[g][m.team_b].ga+=sa; standings[g][m.team_b].gd+=sb-sa;
     if (sa>sb) standings[g][m.team_a].pts+=3;
     else if (sa===sb) { standings[g][m.team_a].pts+=1; standings[g][m.team_b].pts+=1; }
     else standings[g][m.team_b].pts+=3;
   });
+  // FIFA tiebreakers: pts → gd → gf → h2h pts → h2h gd → h2h gf → alfabético
+  const h2hStats = (subset, gmd) => {
+    const names = new Set(subset.map(t => t.name));
+    const h = {};
+    subset.forEach(t => { h[t.name] = {pts:0, gd:0, gf:0}; });
+    (gmd||[]).forEach(({a, b, sa, sb}) => {
+      if (sa === null || !names.has(a) || !names.has(b)) return;
+      h[a].gf+=sa; h[a].gd+=sa-sb; h[b].gf+=sb; h[b].gd+=sb-sa;
+      if (sa>sb) h[a].pts+=3; else if (sa===sb) { h[a].pts+=1; h[b].pts+=1; } else h[b].pts+=3;
+    });
+    return h;
+  };
+  const sortGroup = (teams, gmd) => {
+    const initial = [...teams].sort((a,bv) => bv.pts-a.pts || bv.gd-a.gd || bv.gf-a.gf);
+    const result = [];
+    let i = 0;
+    while (i < initial.length) {
+      let j = i+1;
+      while (j < initial.length && initial[j].pts===initial[i].pts && initial[j].gd===initial[i].gd && initial[j].gf===initial[i].gf) j++;
+      const tied = initial.slice(i, j);
+      if (tied.length > 1) {
+        const h = h2hStats(tied, gmd);
+        tied.sort((a,bv) => h[bv.name].pts-h[a.name].pts || h[bv.name].gd-h[a.name].gd || h[bv.name].gf-h[a.name].gf || a.name.localeCompare(bv.name));
+      }
+      result.push(...tied);
+      i = j;
+    }
+    return result;
+  };
   const sorted = {};
   Object.entries(standings).forEach(([g,teams]) => {
-    sorted[g] = Object.values(teams).sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf || a.name.localeCompare(b.name));
+    sorted[g] = sortGroup(Object.values(teams), groupMatchData[g]);
   });
   const b = {};
   const letters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
@@ -528,7 +563,7 @@ function computeBracket(matches, scores, tiebreakers) {
   });
   const thirds = letters
     .map(l => sorted[`Grupo ${l}`]?.[2] || {name:`3° Grupo ${l}`, pts:0, gd:0, gf:0})
-    .sort((a,bv) => bv.pts-a.pts || bv.gd-a.gd || bv.gf-a.gf);
+    .sort((a,bv) => bv.pts-a.pts || bv.gd-a.gd || bv.gf-a.gf || a.name.localeCompare(bv.name));
   thirds.slice(0,8).forEach((t,i) => { b[`TBD-W${i+1}`] = t.name || `Mejor 3° #${i+1}`; });
   const propagate = (phase, prefix) => {
     matches.filter(m => m.phase===phase).sort((a,bv) => a.match_number-bv.match_number).forEach((m,i) => {
