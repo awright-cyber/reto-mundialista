@@ -861,7 +861,9 @@ function RankingPage({c}) {
     const to = from+PAGE_SIZE-1;
     const fetchRanking = () => {
       supabase.from('v_leaderboard').select('*',{count:'exact'})
-        .order('global_rank',{ascending:true})
+        .order('global_rank',{ascending:true,nullsFirst:false})
+        .order('total_points',{ascending:false,nullsFirst:false})
+        .order('full_name',{ascending:true})
         .range(from,to)
         .then(({data,count})=>{setRanking(data||[]);setTotalCount(count||0);setLoading(false);});
     };
