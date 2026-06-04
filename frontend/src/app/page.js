@@ -881,9 +881,9 @@ function RankingPage({c}) {
         <>
           <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
             {ranking.length===0&&<div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>El ranking se activará cuando comiencen los partidos</div>}
-            {ranking.map((r)=>(
+            {ranking.map((r,i)=>{const pos=r.global_rank??((currentPage-1)*PAGE_SIZE+i+1);return(
               <div key={r.user_id} style={{display:'flex',alignItems:'center',gap:'12px',background:'var(--card)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'8px',padding:'10px 14px'}}>
-                <span style={{fontWeight:800,fontSize:'20px',color:r.global_rank<=3?'var(--gold)':'var(--muted)',width:'28px',textAlign:'center',flexShrink:0}}>{r.global_rank}</span>
+                <span style={{fontWeight:800,fontSize:'20px',color:pos<=3?'var(--gold)':'var(--muted)',width:'28px',textAlign:'center',flexShrink:0}}>{pos}</span>
                 <div style={{flex:1}}>
                   <div style={{fontSize:'14px',fontWeight:500}}>{r.full_name&&!r.full_name.includes('@')?r.full_name:'Participante'}</div>
                   <div style={{fontSize:'11px',color:'var(--muted)'}}>{r.city}</div>
@@ -893,7 +893,7 @@ function RankingPage({c}) {
                 </span>
                 <span style={{fontWeight:700,fontSize:'18px',color:'var(--gold)'}}>{r.total_points}</span>
               </div>
-            ))}
+            );})
           </div>
           {totalPages>1&&(
             <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'12px',marginTop:'20px'}}>
