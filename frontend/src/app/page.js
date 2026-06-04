@@ -895,7 +895,7 @@ function RankingPage({c}) {
                 </span>
                 <span style={{fontWeight:700,fontSize:'18px',color:'var(--gold)'}}>{r.total_points}</span>
               </div>
-            );})
+            );})}
           </div>
           {totalPages>1&&(
             <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'12px',marginTop:'20px'}}>
