@@ -851,40 +851,64 @@ function DashboardPage({user,setPage,c}) {
 function RankingPage({c}) {
   const [ranking,setRanking] = useState([]);
   const [loading,setLoading] = useState(true);
+  const [currentPage,setCurrentPage] = useState(1);
+  const [totalCount,setTotalCount] = useState(0);
+  const PAGE_SIZE = 50;
 
   useEffect(()=>{
+    setLoading(true);
+    const from = (currentPage-1)*PAGE_SIZE;
+    const to = from+PAGE_SIZE-1;
     const fetchRanking = () => {
-      supabase.from('v_leaderboard').select('*').limit(50)
-        .then(({data})=>{setRanking(data||[]);setLoading(false);});
+      supabase.from('v_leaderboard').select('*',{count:'exact'})
+        .order('global_rank',{ascending:true})
+        .range(from,to)
+        .then(({data,count})=>{setRanking(data||[]);setTotalCount(count||0);setLoading(false);});
     };
     fetchRanking();
-    // Actualizar ranking cuando cambia la tabla leaderboard (puntos nuevos)
-    const channel = supabase.channel('ranking-updates')
+    const channel = supabase.channel(`ranking-updates-${currentPage}`)
       .on('postgres_changes',{event:'*',schema:'public',table:'leaderboard'},fetchRanking)
       .subscribe();
     return ()=>{ supabase.removeChannel(channel); };
-  },[]);
+  },[currentPage]);
+
+  const totalPages = Math.ceil(totalCount/PAGE_SIZE);
 
   return (
     <div style={{padding:'24px 20px',maxWidth:'700px',margin:'0 auto'}}>
       <h2 style={{fontWeight:800,fontSize:'22px',textTransform:'uppercase',marginBottom:'16px'}}>{c('nav_tab_ranking')} <span style={{color:'var(--gold)'}}>Global</span></h2>
       {loading?<div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>Cargando ranking...</div>:(
-        <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
-          {ranking.length===0&&<div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>El ranking se activará cuando comiencen los partidos</div>}
-          {ranking.map((r,i)=>(
-            <div key={r.user_id} style={{display:'flex',alignItems:'center',gap:'12px',background:'var(--card)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'8px',padding:'10px 14px'}}>
-              <span style={{fontWeight:800,fontSize:'20px',color:i<3?'var(--gold)':'var(--muted)',width:'28px',textAlign:'center',flexShrink:0}}>{r.global_rank}</span>
-              <div style={{flex:1}}>
-                <div style={{fontSize:'14px',fontWeight:500}}>{r.full_name&&!r.full_name.includes('@')?r.full_name:'Participante'}</div>
-                <div style={{fontSize:'11px',color:'var(--muted)'}}>{r.city}</div>
+        <>
+          <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+            {ranking.length===0&&<div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>El ranking se activará cuando comiencen los partidos</div>}
+            {ranking.map((r)=>(
+              <div key={r.user_id} style={{display:'flex',alignItems:'center',gap:'12px',background:'var(--card)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'8px',padding:'10px 14px'}}>
+                <span style={{fontWeight:800,fontSize:'20px',color:r.global_rank<=3?'var(--gold)':'var(--muted)',width:'28px',textAlign:'center',flexShrink:0}}>{r.global_rank}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:'14px',fontWeight:500}}>{r.full_name&&!r.full_name.includes('@')?r.full_name:'Participante'}</div>
+                  <div style={{fontSize:'11px',color:'var(--muted)'}}>{r.city}</div>
+                </div>
+                <span style={{fontSize:'11px',fontWeight:600,color:r.rank_change>0?'var(--green)':r.rank_change<0?'var(--red)':'var(--muted)'}}>
+                  {r.rank_change>0?`▲${r.rank_change}`:r.rank_change<0?`▼${Math.abs(r.rank_change)}`:'—'}
+                </span>
+                <span style={{fontWeight:700,fontSize:'18px',color:'var(--gold)'}}>{r.total_points}</span>
               </div>
-              <span style={{fontSize:'11px',fontWeight:600,color:r.rank_change>0?'var(--green)':r.rank_change<0?'var(--red)':'var(--muted)'}}>
-                {r.rank_change>0?`▲${r.rank_change}`:r.rank_change<0?`▼${Math.abs(r.rank_change)}`:'—'}
-              </span>
-              <span style={{fontWeight:700,fontSize:'18px',color:'var(--gold)'}}>{r.total_points}</span>
+            ))}
+          </div>
+          {totalPages>1&&(
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'12px',marginTop:'20px'}}>
+              <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1}
+                style={{background:currentPage===1?'rgba(255,255,255,0.04)':'var(--card)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:'8px',color:currentPage===1?'var(--muted)':'var(--text)',padding:'8px 16px',cursor:currentPage===1?'default':'pointer',fontWeight:600,fontSize:'14px'}}>
+                ← Anterior
+              </button>
+              <span style={{fontSize:'13px',color:'var(--muted)',fontWeight:500}}>Página {currentPage} de {totalPages}</span>
+              <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages}
+                style={{background:currentPage===totalPages?'rgba(255,255,255,0.04)':'var(--card)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:'8px',color:currentPage===totalPages?'var(--muted)':'var(--text)',padding:'8px 16px',cursor:currentPage===totalPages?'default':'pointer',fontWeight:600,fontSize:'14px'}}>
+                Siguiente →
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
