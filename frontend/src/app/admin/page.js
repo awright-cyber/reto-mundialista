@@ -104,10 +104,21 @@ export default function AdminPage() {
   };
 
   const updateResult = async (m) => {
-    await supabase.from('matches').update({score_a:parseInt(m.score_a),score_b:parseInt(m.score_b),status:'finished',updated_at:new Date().toISOString()}).eq('id',m.id);
-    await supabase.rpc('calculate_match_points',{p_match_id:m.id});
-    await supabase.rpc('recalculate_leaderboard');
-    setEditResult(null);load();showMsg('✅ Resultado guardado y puntos calculados');
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/save-result', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({secret:PASS, match_id:m.id, score_a:m.score_a, score_b:m.score_b}),
+      });
+      const json = await res.json();
+      if (!res.ok) { showMsg(`❌ Error: ${json.error}`); return; }
+      setEditResult(null); load(); showMsg('✅ Resultado guardado y puntos calculados');
+    } catch(e) {
+      showMsg(`❌ Error: ${e.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const showMsg = (m) => {setMsg(m);setTimeout(()=>setMsg(''),3000);};
@@ -462,7 +473,7 @@ export default function AdminPage() {
                             <span style={{color:'#8899BB',fontWeight:700}}>-</span>
                             <input type="number" min="0" max="20" value={editResult.score_b??''} onChange={e=>setEditResult(p=>({...p,score_b:e.target.value}))}
                               style={{width:'44px',height:'36px',background:'#0A0E1A',border:'1px solid #F5C518',borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center',outline:'none'}} />
-                            <button onClick={()=>updateResult(editResult)} style={{background:'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'12px',border:'none',padding:'6px 12px',borderRadius:'6px',cursor:'pointer'}}>Guardar</button>
+                            <button onClick={()=>updateResult(editResult)} disabled={saving} style={{background:saving?'#888':'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'12px',border:'none',padding:'6px 12px',borderRadius:'6px',cursor:saving?'wait':'pointer'}}>{saving?'Guardando...':'Guardar'}</button>
                             <button onClick={()=>setEditResult(null)} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'12px',padding:'6px 10px',borderRadius:'6px',cursor:'pointer'}}>✕</button>
                           </div>
                         ):(
