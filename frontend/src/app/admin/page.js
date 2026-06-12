@@ -445,6 +445,24 @@ export default function AdminPage() {
           <div>
             <h2 style={{fontWeight:800,fontSize:'20px',textTransform:'uppercase',marginBottom:'4px'}}>Cargar <span style={{color:'#F5C518'}}>Resultados</span></h2>
             <p style={{fontSize:'13px',color:'#8899BB',marginBottom:'16px'}}>Ingresa el resultado oficial. Los puntos se calculan automáticamente.</p>
+            <div style={{background:'rgba(245,197,24,0.06)',border:'1px solid rgba(245,197,24,0.2)',borderRadius:'10px',padding:'14px 16px',marginBottom:'20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',flexWrap:'wrap'}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:'13px',color:'#F5C518',marginBottom:'2px'}}>🔄 Recalcular todos los puntos</div>
+                <div style={{fontSize:'12px',color:'#8899BB'}}>Úsalo si el cron falló en algún partido o el ranking muestra puntos incorrectos.</div>
+              </div>
+              <button onClick={async()=>{
+                setSaving(true);
+                try {
+                  const res = await fetch('/api/admin/recalculate-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:PASS})});
+                  const json = await res.json();
+                  if (!res.ok) showMsg(`❌ Error: ${json.error}`);
+                  else { showMsg(`✅ ${json.message}`); load(); }
+                } catch(e) { showMsg(`❌ ${e.message}`); }
+                finally { setSaving(false); }
+              }} disabled={saving} style={{background:saving?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'13px',border:'none',padding:'8px 20px',borderRadius:'6px',cursor:saving?'wait':'pointer',whiteSpace:'nowrap'}}>
+                {saving?'Recalculando...':'Recalcular puntos'}
+              </button>
+            </div>
             {['grupos','round_of_32','round_of_16','quarterfinals','semifinals','third_place','final'].map(phase=>{
               const pm=matches.filter(m=>m.phase===phase);
               if (!pm.length) return null;
