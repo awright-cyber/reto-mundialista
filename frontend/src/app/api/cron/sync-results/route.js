@@ -182,6 +182,15 @@ async function processFixture({ fixture, goals, teams, score }) {
   const awayGoals = flipped ? goals.home  : goals.away;
 
   if (match.status === newStatus && match.score_a === homeGoals && match.score_b === awayGoals) {
+    // Retry points calculation for recently-finished matches in case a prior RPC call failed
+    if (newStatus === 'finished') {
+      const hoursFromKickoff = (Date.now() - new Date(fixture.date).getTime()) / 3600000;
+      if (hoursFromKickoff < 6) {
+        const { error } = await supabase.rpc('calculate_match_points', { p_match_id: match.id });
+        if (error) console.error(`Points retry error for ${match.id}:`, error.message);
+        else return { updated: false, points: true };
+      }
+    }
     return { updated: false };
   }
 
