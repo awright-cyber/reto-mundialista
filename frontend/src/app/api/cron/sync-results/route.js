@@ -64,21 +64,26 @@ export async function GET(request) {
 
 async function syncResults() {
   const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
-  const [liveData, todayData] = await Promise.all([
+  const [liveData, todayData, yesterdayData] = await Promise.all([
     fetchAPI(`/fixtures?live=all&league=${FIFA_LEAGUE_ID}&season=${SEASON}`),
-    fetchAPI(`/fixtures?league=${FIFA_LEAGUE_ID}&season=${SEASON}&date=${today}`)
+    fetchAPI(`/fixtures?league=${FIFA_LEAGUE_ID}&season=${SEASON}&date=${today}`),
+    fetchAPI(`/fixtures?league=${FIFA_LEAGUE_ID}&season=${SEASON}&date=${yesterday}&status=FT-AET-PEN`)
   ]);
 
   const seen = new Set();
-  const fixtures = [...(liveData?.response||[]), ...(todayData?.response||[])]
-    .filter(f => {
-      if (seen.has(f.fixture.id)) return false;
-      seen.add(f.fixture.id);
-      return true;
-    });
+  const fixtures = [
+    ...(liveData?.response||[]),
+    ...(todayData?.response||[]),
+    ...(yesterdayData?.response||[])
+  ].filter(f => {
+    if (seen.has(f.fixture.id)) return false;
+    seen.add(f.fixture.id);
+    return true;
+  });
 
-  if (!fixtures.length) return { updated: 0, message: 'No matches today' };
+  if (!fixtures.length) return { updated: 0, message: 'No matches found' };
 
   let updated = 0, pointsCalc = 0, notFound = 0;
 
@@ -93,8 +98,9 @@ async function syncResults() {
     }
   }
 
-  if (updated > 0) {
-    await supabase.rpc('recalculate_leaderboard');
+  if (updated > 0 || pointsCalc > 0) {
+    const { error: lbError } = await supabase.rpc('recalculate_leaderboard');
+    if (lbError) console.error('recalculate_leaderboard error:', lbError.message);
   }
 
   return { updated, pointsCalc, notFound, total: fixtures.length };
@@ -206,7 +212,7 @@ async function processFixture({ fixture, goals, teams, score }) {
     if (t.code) teamUpdates.team_b_code = t.code;
   }
 
-  await supabase.from('matches').update({
+  const { error: updateError } = await supabase.from('matches').update({
     status: newStatus,
     score_a: homeGoals ?? match.score_a,
     score_b: awayGoals ?? match.score_b,
@@ -218,10 +224,19 @@ async function processFixture({ fixture, goals, teams, score }) {
     updated_at: new Date().toISOString()
   }).eq('id', match.id);
 
+  if (updateError) {
+    console.error(`Error updating match ${match.id}:`, updateError.message);
+    return { updated: false, reason: 'update_error' };
+  }
+
   let points = false;
   if (newStatus === 'finished' && match.status !== 'finished') {
-    await supabase.rpc('calculate_match_points', { p_match_id: match.id });
-    points = true;
+    const { error: pointsError } = await supabase.rpc('calculate_match_points', { p_match_id: match.id });
+    if (pointsError) {
+      console.error(`calculate_match_points error for match ${match.id}:`, pointsError.message);
+    } else {
+      points = true;
+    }
   }
 
   return { updated: true, points };

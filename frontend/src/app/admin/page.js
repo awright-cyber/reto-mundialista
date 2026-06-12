@@ -541,6 +541,25 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
+            <div style={{background:'rgba(245,197,24,0.06)',border:'1px solid rgba(245,197,24,0.2)',borderRadius:'10px',padding:'16px',marginBottom:'16px'}}>
+              <div style={{fontWeight:700,fontSize:'14px',marginBottom:'6px',color:'#F5C518'}}>🔄 Recalcular puntos y ranking</div>
+              <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>
+                Recalcula los puntos de todos los partidos finalizados y reconstruye el ranking completo.
+                Úsalo si el ranking muestra puntos incorrectos o si el cron falló en algún partido.
+              </p>
+              <button onClick={async()=>{
+                setSaving(true);
+                try {
+                  const res = await fetch('/api/admin/recalculate-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:PASS})});
+                  const json = await res.json();
+                  if (!res.ok) showMsg(`❌ Error: ${json.error}`);
+                  else { showMsg(`✅ ${json.message}`); load(); }
+                } catch(e) { showMsg(`❌ ${e.message}`); }
+                finally { setSaving(false); }
+              }} disabled={saving} style={{background:saving?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'13px',border:'none',padding:'8px 20px',borderRadius:'6px',cursor:saving?'wait':'pointer'}}>
+                {saving?'Recalculando...':'Recalcular todos los puntos'}
+              </button>
+            </div>
             <div style={{background:'#1E2535',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'10px',padding:'16px'}}>
               <div style={{fontWeight:700,fontSize:'14px',marginBottom:'12px',color:'#F5C518'}}>🔗 Links rápidos</div>
               {[['🌐 Ver la app','https://reto.plazalasamericas.ec'],['🗄️ Base de datos (Supabase)','https://supabase.com/dashboard'],['🚀 Hosting (Render)','https://dashboard.render.com'],['⚽ API Football','https://dashboard.api-football.com']].map(([label,url])=>(
