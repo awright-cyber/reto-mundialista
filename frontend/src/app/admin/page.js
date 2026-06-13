@@ -112,7 +112,7 @@ export default function AdminPage() {
         body: JSON.stringify({secret:PASS, match_id:m.id, score_a:m.score_a, score_b:m.score_b}),
       });
       const json = await res.json();
-      if (!res.ok) { showMsg(`❌ Error: ${json.error}`); return; }
+      if (!res.ok) { showMsg(`❌ ${json.error}`); setEditResult(null); load(); return; }
       setEditResult(null); load(); showMsg('✅ Resultado guardado y puntos calculados');
     } catch(e) {
       showMsg(`❌ Error: ${e.message}`);
@@ -455,8 +455,10 @@ export default function AdminPage() {
                 try {
                   const res = await fetch('/api/admin/recalculate-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:PASS})});
                   const json = await res.json();
+                  load();
                   if (!res.ok) showMsg(`❌ Error: ${json.error}`);
-                  else { showMsg(`✅ ${json.message}`); load(); }
+                  else if (json.errors?.length) showMsg(`⚠️ ${json.message} | Error: ${json.errors[0]}`);
+                  else showMsg(`✅ ${json.message}`);
                 } catch(e) { showMsg(`❌ ${e.message}`); }
                 finally { setSaving(false); }
               }} disabled={saving} style={{background:saving?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'13px',border:'none',padding:'8px 20px',borderRadius:'6px',cursor:saving?'wait':'pointer',whiteSpace:'nowrap'}}>
@@ -570,8 +572,10 @@ export default function AdminPage() {
                 try {
                   const res = await fetch('/api/admin/recalculate-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:PASS})});
                   const json = await res.json();
+                  load();
                   if (!res.ok) showMsg(`❌ Error: ${json.error}`);
-                  else { showMsg(`✅ ${json.message}`); load(); }
+                  else if (json.errors?.length) showMsg(`⚠️ ${json.message} | Error: ${json.errors[0]}`);
+                  else showMsg(`✅ ${json.message}`);
                 } catch(e) { showMsg(`❌ ${e.message}`); }
                 finally { setSaving(false); }
               }} disabled={saving} style={{background:saving?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'13px',border:'none',padding:'8px 20px',borderRadius:'6px',cursor:saving?'wait':'pointer'}}>

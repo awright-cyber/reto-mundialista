@@ -42,13 +42,16 @@ export async function POST(request) {
     const { error: lbError } = await supabase.rpc('recalculate_leaderboard');
     if (lbError) errors.push(`Leaderboard: ${lbError.message}`);
 
+    const allOk = errors.length === 0;
     return Response.json({
-      success: errors.length === 0,
+      success: allOk,
       recalculated,
       total: finishedMatches.length,
       errors: errors.length ? errors : undefined,
-      message: `${recalculated}/${finishedMatches.length} partidos recalculados. Ranking actualizado.`
-    });
+      message: allOk
+        ? `✅ ${recalculated}/${finishedMatches.length} partidos recalculados. Ranking actualizado.`
+        : `⚠️ ${recalculated}/${finishedMatches.length} ok. Errores: ${errors.join(' | ')}`,
+    }, { status: allOk ? 200 : 207 });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
   }
