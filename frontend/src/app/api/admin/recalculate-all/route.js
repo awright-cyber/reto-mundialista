@@ -1,6 +1,6 @@
 // POST /api/admin/recalculate-all
 // Recalcula puntos de TODOS los partidos finalizados y reconstruye el ranking.
-// Útil cuando el trigger bloqueó cálculos previos o para corregir datos.
+// Ejecuta calculate_match_points en paralelo para evitar timeouts.
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -27,15 +27,27 @@ export async function POST(request) {
       return Response.json({ success: true, message: 'No hay partidos finalizados', recalculated: 0 });
     }
 
+    // Ejecución en paralelo — de ~24s secuencial a ~2s
+    const settled = await Promise.allSettled(
+      finishedMatches.map(match =>
+        supabase.rpc('calculate_match_points', { p_match_id: match.id })
+          .then(({ error }) => ({ match, error }))
+      )
+    );
+
     let recalculated = 0;
     const errors = [];
 
-    for (const match of finishedMatches) {
-      const { error } = await supabase.rpc('calculate_match_points', { p_match_id: match.id });
-      if (error) {
-        errors.push(`${match.team_a} vs ${match.team_b}: ${error.message}`);
+    for (const r of settled) {
+      if (r.status === 'rejected') {
+        errors.push(`Excepción inesperada: ${r.reason}`);
       } else {
-        recalculated++;
+        const { match, error } = r.value;
+        if (error) {
+          errors.push(`${match.team_a} vs ${match.team_b} (#${match.match_number}): ${error.message}`);
+        } else {
+          recalculated++;
+        }
       }
     }
 

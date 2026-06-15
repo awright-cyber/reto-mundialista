@@ -54,7 +54,10 @@ export default function AdminPage() {
   const [matches,setMatches] = useState([]);
   const [stats,setStats] = useState({users:0,predictions:0,finished:0});
   const [saving,setSaving] = useState(false);
+  const [syncing,setSyncing] = useState(false);
+  const [syncResult,setSyncResult] = useState(null);
   const [msg,setMsg] = useState('');
+  const [msgType,setMsgType] = useState('ok');
   const [editResult,setEditResult] = useState(null);
   const [editPromo,setEditPromo] = useState(null);
 
@@ -121,7 +124,22 @@ export default function AdminPage() {
     }
   };
 
-  const showMsg = (m) => {setMsg(m);setTimeout(()=>setMsg(''),3000);};
+  const showMsg = (m,type='ok') => {
+    setMsg(m); setMsgType(type);
+    setTimeout(()=>setMsg(''),(type==='ok')?3000:8000);
+  };
+
+  const runSync = async () => {
+    setSyncing(true); setSyncResult(null);
+    try {
+      const res = await fetch('/api/admin/run-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:PASS})});
+      const json = await res.json();
+      setSyncResult(json);
+      if (res.ok && json.success) { showMsg(`✅ Sync OK: ${json.updated||0} actualizados, ${json.pointsCalc||0} puntos calc., ${json.notFound||0} no encontrados`,'ok'); load(); }
+      else showMsg(`⚠️ Sync: ${json.error||'ver detalles en panel de abajo'}`,'error');
+    } catch(e) { setSyncResult({error:e.message}); showMsg(`❌ ${e.message}`,'error'); }
+    finally { setSyncing(false); }
+  };
   const s = (k) => content[k] ?? DEFAULT_CONTENT[k] ?? '';
   const set = (k,v) => setContent(p=>({...p,[k]:v}));
 
@@ -161,7 +179,7 @@ export default function AdminPage() {
         <button onClick={()=>setAuth(false)} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'12px',padding:'5px 10px',borderRadius:'6px',cursor:'pointer'}}>Salir</button>
       </nav>
 
-      {msg&&<div style={{background:msg.includes('✅')?'rgba(34,197,94,0.1)':'rgba(230,57,70,0.1)',border:`1px solid ${msg.includes('✅')?'rgba(34,197,94,0.3)':'rgba(230,57,70,0.3)'}`,padding:'10px 20px',fontSize:'13px',textAlign:'center',color:msg.includes('✅')?'#4ADE80':'#FF6B7A'}}>{msg}</div>}
+      {msg&&<div style={{background:msgType==='ok'?'rgba(34,197,94,0.1)':'rgba(230,57,70,0.1)',border:`1px solid ${msgType==='ok'?'rgba(34,197,94,0.3)':'rgba(230,57,70,0.3)'}`,padding:'10px 20px',fontSize:'13px',textAlign:'center',color:msgType==='ok'?'#4ADE80':'#FF6B7A',fontWeight:msgType!=='ok'?600:400}}>{msg}</div>}
 
       <div style={{padding:'20px',maxWidth:'900px',margin:'0 auto'}}>
 
@@ -456,10 +474,10 @@ export default function AdminPage() {
                   const res = await fetch('/api/admin/recalculate-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:PASS})});
                   const json = await res.json();
                   load();
-                  if (!res.ok) showMsg(`❌ Error: ${json.error}`);
-                  else if (json.errors?.length) showMsg(`⚠️ ${json.message} | Error: ${json.errors[0]}`);
-                  else showMsg(`✅ ${json.message}`);
-                } catch(e) { showMsg(`❌ ${e.message}`); }
+                  if (!res.ok) showMsg(`❌ Error: ${json.error}`,'error');
+                  else if (json.errors?.length) showMsg(`⚠️ ${json.message} | Error: ${json.errors[0]}`,'error');
+                  else showMsg(`✅ ${json.message}`,'ok');
+                } catch(e) { showMsg(`❌ ${e.message}`,'error'); }
                 finally { setSaving(false); }
               }} disabled={saving} style={{background:saving?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'13px',border:'none',padding:'8px 20px',borderRadius:'6px',cursor:saving?'wait':'pointer',whiteSpace:'nowrap'}}>
                 {saving?'Recalculando...':'Recalcular puntos'}
@@ -573,15 +591,51 @@ export default function AdminPage() {
                   const res = await fetch('/api/admin/recalculate-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:PASS})});
                   const json = await res.json();
                   load();
-                  if (!res.ok) showMsg(`❌ Error: ${json.error}`);
-                  else if (json.errors?.length) showMsg(`⚠️ ${json.message} | Error: ${json.errors[0]}`);
-                  else showMsg(`✅ ${json.message}`);
-                } catch(e) { showMsg(`❌ ${e.message}`); }
+                  if (!res.ok) showMsg(`❌ Error: ${json.error}`,'error');
+                  else if (json.errors?.length) showMsg(`⚠️ ${json.message} | Error: ${json.errors[0]}`,'error');
+                  else showMsg(`✅ ${json.message}`,'ok');
+                } catch(e) { showMsg(`❌ ${e.message}`,'error'); }
                 finally { setSaving(false); }
-              }} disabled={saving} style={{background:saving?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'13px',border:'none',padding:'8px 20px',borderRadius:'6px',cursor:saving?'wait':'pointer'}}>
+              }} disabled={saving||syncing} style={{background:saving?'#8899BB':'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'13px',border:'none',padding:'8px 20px',borderRadius:'6px',cursor:saving?'wait':'pointer'}}>
                 {saving?'Recalculando...':'Recalcular todos los puntos'}
               </button>
             </div>
+
+            <div style={{background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.25)',borderRadius:'10px',padding:'16px',marginBottom:'16px'}}>
+              <div style={{fontWeight:700,fontSize:'14px',marginBottom:'6px',color:'#60A5FA'}}>⚡ Sincronización con API-Football</div>
+              <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>
+                Conecta con la API y actualiza resultados ahora mismo. El output muestra exactamente qué pasa — útil para diagnosticar por qué el cron automático no funciona.
+              </p>
+              <button onClick={runSync} disabled={syncing||saving} style={{background:syncing?'#8899BB':'#3B82F6',color:'#fff',fontWeight:700,fontSize:'13px',border:'none',padding:'8px 20px',borderRadius:'6px',cursor:syncing?'wait':'pointer',marginBottom:'12px'}}>
+                {syncing?'⏳ Sincronizando...':'⚡ Forzar sincronización API'}
+              </button>
+              {syncResult&&(
+                <div>
+                  <div style={{fontSize:'11px',fontWeight:600,color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>
+                    Resultado ({syncResult.cron_http_status ? `HTTP ${syncResult.cron_http_status}` : 'error local'})
+                  </div>
+                  <pre style={{background:'#0A0E1A',border:`1px solid ${syncResult.success===false||syncResult.error?'rgba(230,57,70,0.3)':'rgba(34,197,94,0.3)'}`,borderRadius:'8px',padding:'12px',fontSize:'11px',fontFamily:'monospace',whiteSpace:'pre-wrap',overflowX:'auto',color:syncResult.error?'#FF6B7A':'#8899BB',maxHeight:'280px',overflowY:'auto',margin:0}}>
+                    {JSON.stringify(syncResult,null,2)}
+                  </pre>
+                  {syncResult.notFound>0&&(
+                    <div style={{marginTop:'8px',padding:'8px 12px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.2)',borderRadius:'6px',fontSize:'12px',color:'#FBB724'}}>
+                      ⚠️ {syncResult.notFound} partido(s) de la API no se pudieron emparejar con la DB. Ejecuta primero el endpoint <code>/api/admin/map-fixtures?secret=TU_CRON_SECRET</code> para mapear los external_id.
+                    </div>
+                  )}
+                  {syncResult.cron_http_status===401&&(
+                    <div style={{marginTop:'8px',padding:'8px 12px',background:'rgba(230,57,70,0.08)',border:'1px solid rgba(230,57,70,0.2)',borderRadius:'6px',fontSize:'12px',color:'#FF6B7A'}}>
+                      ❌ Error 401: el CRON_SECRET no coincide. Verifica la variable en Render → Environment.
+                    </div>
+                  )}
+                  {syncResult.total===0&&!syncResult.error&&(
+                    <div style={{marginTop:'8px',padding:'8px 12px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.2)',borderRadius:'6px',fontSize:'12px',color:'#FBB724'}}>
+                      ⚠️ La API devolvió 0 partidos hoy. Posibles causas: ID de liga incorrecto (actual: 1), la API no tiene datos del Mundial 2026 aún, o la API Key está sin créditos. Revisa en <a href="https://dashboard.api-football.com" target="_blank" rel="noopener" style={{color:'#60A5FA'}}>dashboard.api-football.com</a>.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div style={{background:'#1E2535',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'10px',padding:'16px'}}>
               <div style={{fontWeight:700,fontSize:'14px',marginBottom:'12px',color:'#F5C518'}}>🔗 Links rápidos</div>
               {[['🌐 Ver la app','https://reto.plazalasamericas.ec'],['🗄️ Base de datos (Supabase)','https://supabase.com/dashboard'],['🚀 Hosting (Render)','https://dashboard.render.com'],['⚽ API Football','https://dashboard.api-football.com']].map(([label,url])=>(
