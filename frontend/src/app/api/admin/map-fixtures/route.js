@@ -16,8 +16,8 @@ const SEASON = 2026;
 // API-Football (inglés) → nombre en la DB (español)
 const TEAM_NAME_ES = {
   'Germany':'Alemania','Korea Republic':'Corea del Sur','Korea DPR':'Corea del Norte',
-  'South Korea':'Corea del Sur',                          // alias alternativo API
-  "Cote d'Ivoire":'Costa de Marfil','Ivory Coast':'Costa de Marfil',
+  'South Korea':'Corea del Sur',
+  "Cote d'Ivoire":'Costa de Marfil',"Côte d'Ivoire":'Costa de Marfil','Ivory Coast':'Costa de Marfil',
   'Netherlands':'Países Bajos','Japan':'Japón','Sweden':'Suecia',
   'Belgium':'Bélgica','Egypt':'Egipto','Iran':'Irán',
   'New Zealand':'Nueva Zelanda','Spain':'España','Morocco':'Marruecos',
@@ -32,13 +32,13 @@ const TEAM_NAME_ES = {
   'Haiti':'Haití','Scotland':'Escocia',
   'Bosnia':'Bosnia y Herzegovina','Bosnia & Herzegovina':'Bosnia y Herzegovina',
   'Qatar':'Qatar','Switzerland':'Suiza','Brazil':'Brasil','Tunisia':'Túnez',
-  'South Africa':'Sudáfrica','Czech Republic':'Chequia',
+  'South Africa':'Sudáfrica','Czech Republic':'Chequia','Czechia':'Chequia',
   'Canada':'Canadá','Cape Verde':'Cabo Verde','Cape Verde Islands':'Cabo Verde',
   'Mexico':'México','Ghana':'Ghana','Colombia':'Colombia',
   'Portugal':'Portugal','Argentina':'Argentina','Uruguay':'Uruguay',
   'Senegal':'Senegal','Ecuador':'Ecuador','Paraguay':'Paraguay',
   'Australia':'Australia','Austria':'Austria',
-  'Costa Rica':'Costa Rica','Croatia':'Croacia',
+  'Costa Rica':'Costa Rica',
 };
 
 // Normalizar: mayúsculas + sin tildes/diacríticos

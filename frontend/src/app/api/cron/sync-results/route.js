@@ -23,7 +23,7 @@ const STATUS_MAP = {
 
 const TEAM_NAME_ES = {
   'Germany':'Alemania','Korea Republic':'Corea del Sur','Korea DPR':'Corea del Norte',
-  "Cote d'Ivoire":'Costa de Marfil','Ivory Coast':'Costa de Marfil',
+  "Cote d'Ivoire":'Costa de Marfil',"Côte d'Ivoire":'Costa de Marfil','Ivory Coast':'Costa de Marfil',
   'Netherlands':'Países Bajos','Japan':'Japón','Sweden':'Suecia',
   'Belgium':'Bélgica','Egypt':'Egipto','Iran':'Irán',
   'New Zealand':'Nueva Zelanda','Spain':'España','Morocco':'Marruecos',
@@ -36,10 +36,14 @@ const TEAM_NAME_ES = {
   'Turkey':'Turquía','Curacao':'Curazao','Curaçao':'Curazao','Haiti':'Haití',
   'Scotland':'Escocia','Bosnia':'Bosnia y Herzegovina','Qatar':'Qatar',
   'Switzerland':'Suiza','Brazil':'Brasil','Tunisia':'Túnez',
-  'South Africa':'Sudáfrica','Czech Republic':'Chequia',
+  'South Africa':'Sudáfrica','Czech Republic':'Chequia','Czechia':'Chequia',
   'Canada':'Canadá','Cape Verde':'Cabo Verde','Mexico':'México',
   'Cape Verde Islands':'Cabo Verde','Türkiye':'Turquía',
   'South Korea':'Corea del Sur','Bosnia & Herzegovina':'Bosnia y Herzegovina',
+  'Ghana':'Ghana','Colombia':'Colombia','Portugal':'Portugal',
+  'Argentina':'Argentina','Uruguay':'Uruguay','Senegal':'Senegal',
+  'Ecuador':'Ecuador','Paraguay':'Paraguay','Australia':'Australia',
+  'Austria':'Austria','Costa Rica':'Costa Rica',
 };
 
 // Normalizar nombre: mayúsculas + sin tildes
@@ -155,8 +159,8 @@ async function processFixture({ fixture, goals, teams, score }) {
         (m.team_a_code === ac && m.team_b_code === hc)
       ) || null;
       // Último recurso: estadio
-      if (!match && fixture.fixture.venue?.name) {
-        const venue = fixture.fixture.venue.name.split(' ')[0].toLowerCase();
+      if (!match && fixture.venue?.name) {
+        const venue = fixture.venue.name.split(' ')[0].toLowerCase();
         match = candidates.find(m =>
           m.stadium && m.stadium.toLowerCase().includes(venue)
         ) || null;
