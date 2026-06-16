@@ -25,7 +25,7 @@ const TEAM_NAME_ES = {
   'Germany':'Alemania','Korea Republic':'Corea del Sur','Korea DPR':'Corea del Norte',
   "Cote d'Ivoire":'Costa de Marfil',"Côte d'Ivoire":'Costa de Marfil','Ivory Coast':'Costa de Marfil',
   'Netherlands':'Países Bajos','Japan':'Japón','Sweden':'Suecia',
-  'Belgium':'Bélgica','Egypt':'Egipto','Iran':'Irán',
+  'Belgium':'Bélgica','Egypt':'Egipto','Iran':'Irán','IR Iran':'Irán',
   'New Zealand':'Nueva Zelanda','Spain':'España','Morocco':'Marruecos',
   'Algeria':'Argelia','Jordan':'Jordania',
   'DR Congo':'RD Congo','Congo DR':'RD Congo','Uzbekistan':'Uzbekistán',
