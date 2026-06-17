@@ -56,6 +56,8 @@ export default function AdminPage() {
   const [saving,setSaving] = useState(false);
   const [syncing,setSyncing] = useState(false);
   const [syncResult,setSyncResult] = useState(null);
+  const [mapping,setMapping] = useState(false);
+  const [mapResult,setMapResult] = useState(null);
   const [msg,setMsg] = useState('');
   const [msgType,setMsgType] = useState('ok');
   const [editResult,setEditResult] = useState(null);
@@ -127,6 +129,21 @@ export default function AdminPage() {
   const showMsg = (m,type='ok') => {
     setMsg(m); setMsgType(type);
     setTimeout(()=>setMsg(''),(type==='ok')?3000:8000);
+  };
+
+  const runMap = async () => {
+    setMapping(true); setMapResult(null);
+    try {
+      const res = await fetch('/api/admin/map-fixtures',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:PASS})});
+      const json = await res.json();
+      setMapResult(json);
+      if (res.ok && json.success) {
+        const s = json.summary || {};
+        showMsg(`✅ Mapeo OK: ${s.mapped||0} mapeados, ${s.alreadyMapped||0} ya tenían ID, ${s.notFound||0} sin encontrar`,'ok');
+        load();
+      } else showMsg(`⚠️ Mapeo: ${json.error||'ver detalles abajo'}`,'error');
+    } catch(e) { setMapResult({error:e.message}); showMsg(`❌ ${e.message}`,'error'); }
+    finally { setMapping(false); }
   };
 
   const runSync = async () => {
@@ -601,6 +618,38 @@ export default function AdminPage() {
               </button>
             </div>
 
+            <div style={{background:'rgba(16,185,129,0.06)',border:'1px solid rgba(16,185,129,0.25)',borderRadius:'10px',padding:'16px',marginBottom:'12px'}}>
+              <div style={{fontWeight:700,fontSize:'14px',marginBottom:'6px',color:'#34D399'}}>🗺️ Mapear Fixtures (usa cuando hay notFound &gt; 0)</div>
+              <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>
+                Descarga todos los partidos de API-Football y los vincula con la DB por nombre de equipo y estadio. Corre esto si el sync automático no encuentra algún partido.
+              </p>
+              <button onClick={runMap} disabled={mapping||syncing||saving} style={{background:mapping?'#8899BB':'#10B981',color:'#fff',fontWeight:700,fontSize:'13px',border:'none',padding:'8px 20px',borderRadius:'6px',cursor:mapping?'wait':'pointer',marginBottom:'12px'}}>
+                {mapping?'⏳ Mapeando...':'🗺️ Mapear Fixtures'}
+              </button>
+              {mapResult&&(
+                <div>
+                  <div style={{fontSize:'11px',fontWeight:600,color:'#8899BB',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}}>Resultado del mapeo</div>
+                  {mapResult.summary&&(
+                    <div style={{display:'flex',gap:'8px',flexWrap:'wrap',marginBottom:'8px'}}>
+                      {[['Mapeados',mapResult.summary.mapped,'#34D399'],['Ya tenían ID',mapResult.summary.alreadyMapped,'#60A5FA'],['Sin encontrar',mapResult.summary.notFound,'#F59E0B'],['Total API',mapResult.summary.total_api,'#8899BB']].map(([k,v,c])=>(
+                        <div key={k} style={{background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'6px',padding:'6px 12px',fontSize:'12px'}}>
+                          <span style={{color:c,fontWeight:700}}>{v}</span> <span style={{color:'#8899BB'}}>{k}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {mapResult.summary?.notFound>0&&(
+                    <div style={{marginTop:'4px',padding:'8px 12px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.2)',borderRadius:'6px',fontSize:'12px',color:'#FBB724',marginBottom:'8px'}}>
+                      ⚠️ {mapResult.summary.notFound} partido(s) no encontrados. Revisa el JSON de detalles abajo — verás qué partido de la API no tiene equivalente en DB y el estadio que reporta.
+                    </div>
+                  )}
+                  <pre style={{background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'8px',padding:'12px',fontSize:'10px',fontFamily:'monospace',whiteSpace:'pre-wrap',overflowX:'auto',color:'#8899BB',maxHeight:'220px',overflowY:'auto',margin:0}}>
+                    {JSON.stringify(mapResult,null,2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+
             <div style={{background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.25)',borderRadius:'10px',padding:'16px',marginBottom:'16px'}}>
               <div style={{fontWeight:700,fontSize:'14px',marginBottom:'6px',color:'#60A5FA'}}>⚡ Sincronización con API-Football</div>
               <p style={{fontSize:'12px',color:'#8899BB',marginBottom:'12px'}}>
@@ -619,7 +668,7 @@ export default function AdminPage() {
                   </pre>
                   {syncResult.notFound>0&&(
                     <div style={{marginTop:'8px',padding:'8px 12px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.2)',borderRadius:'6px',fontSize:'12px',color:'#FBB724'}}>
-                      ⚠️ {syncResult.notFound} partido(s) de la API no se pudieron emparejar con la DB. Ejecuta primero el endpoint <code>/api/admin/map-fixtures?secret=TU_CRON_SECRET</code> para mapear los external_id.
+                      ⚠️ {syncResult.notFound} partido(s) no se pudieron emparejar con la DB. Presiona <strong>"🗺️ Mapear Fixtures"</strong> arriba para vincularlos y luego sincroniza de nuevo.
                     </div>
                   )}
                   {syncResult.cron_http_status===401&&(

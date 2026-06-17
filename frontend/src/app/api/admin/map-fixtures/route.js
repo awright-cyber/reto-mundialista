@@ -51,11 +51,27 @@ function toES(apiName) {
   return TEAM_NAME_ES[apiName] || apiName;
 }
 
+export async function POST(request) {
+  try {
+    const { secret } = await request.json();
+    if (secret !== process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return runMapping();
+  } catch (e) {
+    return Response.json({ error: e.message }, { status: 500 });
+  }
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   if (searchParams.get('secret') !== process.env.CRON_SECRET) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  return runMapping();
+}
+
+async function runMapping() {
 
   try {
     const data = await fetchAPI(`/fixtures?league=${FIFA_LEAGUE_ID}&season=${SEASON}`);
@@ -122,17 +138,19 @@ export async function GET(request) {
       }
     }
 
-    // ── PASADA 2: timestamp para TBD (equipos sin nombre aún en DB) ──────────
+    // ── PASADA 2: timestamp para TBD — ventana ±2h + estadio como desambiguador ──
     for (const f of unmapped) {
       const externalId = String(f.fixture.id);
       const kickoff = new Date(f.fixture.date);
       const hn = norm(toES(f.teams.home.name));
       const an = norm(toES(f.teams.away.name));
 
+      // ±2h para acomodar diferencias entre horario estimado en CSV y horario real FIFA
       const candidates = dbMatches.filter(m => {
         if (m.external_id && m.external_id !== externalId) return false;
         const diff = Math.abs(new Date(m.scheduled_at).getTime() - kickoff.getTime());
-        return diff < 5 * 60000;
+        const isTBD = m.team_a?.startsWith('TBD') || m.team_b?.startsWith('TBD');
+        return diff < (isTBD ? 2 * 3600000 : 5 * 60000);
       });
 
       let dbMatch = null, flipped = false;
@@ -148,11 +166,24 @@ export async function GET(request) {
           flipped = reversedMatch && !normalMatch;
         }
       } else if (candidates.length > 1) {
+        // Prioridad 1: nombre exacto
         let c = candidates.find(m => norm(m.team_a) === hn && norm(m.team_b) === an);
         if (c) { dbMatch = c; flipped = false; }
         else {
           c = candidates.find(m => norm(m.team_a) === an && norm(m.team_b) === hn);
           if (c) { dbMatch = c; flipped = true; }
+        }
+        // Prioridad 2: estadio (clave para TBD con ventana amplia)
+        if (!dbMatch && f.fixture.venue?.name) {
+          const venueLower = f.fixture.venue.name.toLowerCase();
+          const venueWord  = venueLower.split(' ')[0];
+          c = candidates.find(m =>
+            m.stadium && (
+              m.stadium.toLowerCase().includes(venueWord) ||
+              venueLower.includes(m.stadium.toLowerCase().split(' ')[0])
+            )
+          ) || null;
+          if (c) { dbMatch = c; flipped = false; }
         }
       }
 
@@ -164,7 +195,8 @@ export async function GET(request) {
           searched_home_es: toES(f.teams.home.name),
           searched_away_es: toES(f.teams.away.name),
           date: f.fixture.date,
-          candidates: candidates.map(m => ({ ta: m.team_a, tb: m.team_b })),
+          venue: f.fixture.venue?.name,
+          candidates: candidates.map(m => ({ ta: m.team_a, tb: m.team_b, stadium: m.stadium })),
         });
         continue;
       }

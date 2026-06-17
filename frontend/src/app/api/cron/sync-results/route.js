@@ -158,13 +158,39 @@ async function processFixture({ fixture, goals, teams, score }) {
         (m.team_a_code === hc && m.team_b_code === ac) ||
         (m.team_a_code === ac && m.team_b_code === hc)
       ) || null;
-      // Último recurso: estadio
       if (!match && fixture.venue?.name) {
         const venue = fixture.venue.name.split(' ')[0].toLowerCase();
         match = candidates.find(m =>
           m.stadium && m.stadium.toLowerCase().includes(venue)
         ) || null;
       }
+    }
+    if (match) {
+      await supabase.from('matches').update({ external_id: externalId }).eq('id', match.id);
+    }
+  }
+
+  // 3b. Fallback ampliado ±2h para partidos TBD (el horario estimado en el CSV puede diferir del real)
+  // Se usa el estadio como desambiguador principal
+  if (!match && fixture.venue?.name) {
+    const kickoff = new Date(fixture.date);
+    const from2h = new Date(kickoff.getTime() - 2 * 3600000).toISOString();
+    const to2h   = new Date(kickoff.getTime() + 2 * 3600000).toISOString();
+
+    const { data: tbdCandidates } = await supabase.from('matches').select(SELECT)
+      .gte('scheduled_at', from2h).lte('scheduled_at', to2h)
+      .or('team_a.ilike.TBD%,team_b.ilike.TBD%');
+
+    if (tbdCandidates?.length) {
+      const venueLower = fixture.venue.name.toLowerCase();
+      const venueWord  = venueLower.split(' ')[0];
+      match = tbdCandidates.find(m =>
+        m.stadium && (
+          m.stadium.toLowerCase().includes(venueWord) ||
+          venueLower.includes(m.stadium.toLowerCase().split(' ')[0])
+        )
+      ) || null;
+      if (!match && tbdCandidates.length === 1) match = tbdCandidates[0];
     }
     if (match) {
       await supabase.from('matches').update({ external_id: externalId }).eq('id', match.id);
