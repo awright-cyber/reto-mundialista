@@ -70,17 +70,36 @@ async function syncResults() {
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
-  const [liveData, todayData, yesterdayData] = await Promise.all([
+  // Partidos cuyo kickoff ya pasó pero siguen pending/live en la DB: se consultan
+  // por ID directo, porque /fixtures?date=... puede servir una respuesta cacheada
+  // por API-Football (visto en producción: devolvía "NS" para partidos que ya
+  // estaban FT al consultarlos por ID). La consulta por ID siempre es en vivo.
+  const { data: staleMatches } = await supabase
+    .from('matches')
+    .select('external_id')
+    .in('status', ['pending', 'live'])
+    .lte('scheduled_at', new Date().toISOString())
+    .not('external_id', 'is', null);
+
+  const staleIds = (staleMatches || []).map(m => m.external_id);
+  const idChunks = [];
+  for (let i = 0; i < staleIds.length; i += 20) {
+    idChunks.push(staleIds.slice(i, i + 20));
+  }
+
+  const [liveData, todayData, yesterdayData, ...staleDatas] = await Promise.all([
     fetchAPI(`/fixtures?live=all&league=${FIFA_LEAGUE_ID}&season=${SEASON}`),
     fetchAPI(`/fixtures?league=${FIFA_LEAGUE_ID}&season=${SEASON}&date=${today}`),
-    fetchAPI(`/fixtures?league=${FIFA_LEAGUE_ID}&season=${SEASON}&date=${yesterday}&status=FT-AET-PEN`)
+    fetchAPI(`/fixtures?league=${FIFA_LEAGUE_ID}&season=${SEASON}&date=${yesterday}&status=FT-AET-PEN`),
+    ...idChunks.map(chunk => fetchAPI(`/fixtures?ids=${chunk.join('-')}`))
   ]);
 
   const seen = new Set();
   const fixtures = [
     ...(liveData?.response||[]),
     ...(todayData?.response||[]),
-    ...(yesterdayData?.response||[])
+    ...(yesterdayData?.response||[]),
+    ...staleDatas.flatMap(d => d?.response || [])
   ].filter(f => {
     if (seen.has(f.fixture.id)) return false;
     seen.add(f.fixture.id);
