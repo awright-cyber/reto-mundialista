@@ -20,8 +20,33 @@ export async function GET(request) {
   const leagueId = searchParams.get('league');
   const season   = searchParams.get('season') || '2026';
   const ids      = searchParams.get('ids');
+  const date     = searchParams.get('date');
+  const status   = searchParams.get('status');
 
   try {
+    if (date) {
+      // Modo 4: replica exacta de la consulta que usa el cron (por fecha)
+      const league = leagueId || 1;
+      const statusQ = status ? `&status=${status}` : '';
+      const data = await callAPI(`/fixtures?league=${league}&season=${season}&date=${date}${statusQ}`);
+      const fixtures = data?.response || [];
+      return Response.json({
+        query: `/fixtures?league=${league}&season=${season}&date=${date}${statusQ}`,
+        total_found: fixtures.length,
+        fixtures: fixtures.map(f => ({
+          id: f.fixture.id,
+          date: f.fixture.date,
+          status_short: f.fixture.status.short,
+          home: f.teams.home.name,
+          away: f.teams.away.name,
+          goals_home: f.goals.home,
+          goals_away: f.goals.away,
+        })),
+        api_status: data?.results,
+        api_errors: data?.errors,
+      });
+    }
+
     if (ids) {
       // Modo 3: buscar fixtures específicos por ID (ej: ?ids=1489385-1489386)
       const data = await callAPI(`/fixtures?ids=${ids}`);
