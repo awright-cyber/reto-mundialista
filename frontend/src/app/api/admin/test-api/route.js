@@ -19,8 +19,32 @@ export async function GET(request) {
 
   const leagueId = searchParams.get('league');
   const season   = searchParams.get('season') || '2026';
+  const ids      = searchParams.get('ids');
 
   try {
+    if (ids) {
+      // Modo 3: buscar fixtures específicos por ID (ej: ?ids=1489385-1489386)
+      const data = await callAPI(`/fixtures?ids=${ids}`);
+      const fixtures = data?.response || [];
+      return Response.json({
+        ids,
+        total_found: fixtures.length,
+        fixtures: fixtures.map(f => ({
+          id: f.fixture.id,
+          date: f.fixture.date,
+          status_short: f.fixture.status.short,
+          status_long: f.fixture.status.long,
+          elapsed: f.fixture.status.elapsed,
+          home: f.teams.home.name,
+          away: f.teams.away.name,
+          goals_home: f.goals.home,
+          goals_away: f.goals.away,
+        })),
+        api_status: data?.results,
+        api_errors: data?.errors,
+      });
+    }
+
     if (leagueId) {
       // Modo 2: mostrar los primeros fixtures de un league_id específico
       const data = await callAPI(`/fixtures?league=${leagueId}&season=${season}&timezone=UTC`);
