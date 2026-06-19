@@ -22,8 +22,33 @@ export async function GET(request) {
   const ids      = searchParams.get('ids');
   const date     = searchParams.get('date');
   const status   = searchParams.get('status');
+  const live     = searchParams.get('live');
 
   try {
+    if (live) {
+      // Modo 5: replica la consulta live=all que usa el cron, para ver si el feed
+      // "live" de API-Football quedó pegado en un estado viejo para algún fixture.
+      const league = leagueId || 1;
+      const data = await callAPI(`/fixtures?live=all&league=${league}&season=${season}`);
+      const fixtures = data?.response || [];
+      return Response.json({
+        query: `/fixtures?live=all&league=${league}&season=${season}`,
+        total_found: fixtures.length,
+        fixtures: fixtures.map(f => ({
+          id: f.fixture.id,
+          date: f.fixture.date,
+          status_short: f.fixture.status.short,
+          elapsed: f.fixture.status.elapsed,
+          home: f.teams.home.name,
+          away: f.teams.away.name,
+          goals_home: f.goals.home,
+          goals_away: f.goals.away,
+        })),
+        api_status: data?.results,
+        api_errors: data?.errors,
+      });
+    }
+
     if (date) {
       // Modo 4: replica exacta de la consulta que usa el cron (por fecha)
       const league = leagueId || 1;

@@ -94,12 +94,16 @@ async function syncResults() {
     ...idChunks.map(chunk => fetchAPI(`/fixtures?ids=${chunk.join('-')}`))
   ]);
 
+  // staleDatas (consulta directa por ID) va primero: es la fuente más confiable para
+  // partidos que ya deberían haber terminado. El feed live=all puede quedarse "pegado"
+  // mostrando un partido como en vivo con un marcador viejo aunque la API, consultada
+  // por ID, ya lo reporte FT — visto en producción con Canadá vs Qatar (18/06/2026).
   const seen = new Set();
   const fixtures = [
+    ...staleDatas.flatMap(d => d?.response || []),
     ...(liveData?.response||[]),
     ...(todayData?.response||[]),
-    ...(yesterdayData?.response||[]),
-    ...staleDatas.flatMap(d => d?.response || [])
+    ...(yesterdayData?.response||[])
   ].filter(f => {
     if (seen.has(f.fixture.id)) return false;
     seen.add(f.fixture.id);
