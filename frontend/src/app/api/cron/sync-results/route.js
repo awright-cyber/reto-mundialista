@@ -222,6 +222,15 @@ async function processFixture({ fixture, goals, teams, score }) {
 
   if (!match) return { updated: false, reason: 'match_not_found' };
 
+  // Un partido ya finalizado (manual o automáticamente) nunca debe retroceder a
+  // live/pending. El feed de API-Football puede quedarse pegado reportando un
+  // fixture como en vivo por horas (visto en prod: México vs Corea del Sur
+  // quedó en "2H" elapsed 90' durante 12+ horas) aunque el resultado real ya
+  // esté cargado — sin este guard esa data vieja sobrescribiría la corrección.
+  if (match.status === 'finished' && newStatus !== 'finished') {
+    return { updated: false, reason: 'already_finished_ignore_regression' };
+  }
+
   // Detectar orientación invertida por nombre (API /fixtures no devuelve code)
   // Caso: API home = DB team_b (ej: API tiene Curaçao como home, DB tiene Ecuador como team_a)
   const homeNameES = normStr(TEAM_NAME_ES[teams.home.name] || teams.home.name);
