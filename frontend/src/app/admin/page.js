@@ -62,6 +62,7 @@ export default function AdminPage() {
   const [msgType,setMsgType] = useState('ok');
   const [editResult,setEditResult] = useState(null);
   const [editPromo,setEditPromo] = useState(null);
+  const [editTeams,setEditTeams] = useState(null);
 
   const PASS = process.env.NEXT_PUBLIC_ADMIN_PASSWORD||'plaza2026admin';
 
@@ -121,6 +122,24 @@ export default function AdminPage() {
       setEditResult(null); load(); showMsg('✅ Resultado guardado y puntos calculados');
     } catch(e) {
       showMsg(`❌ Error: ${e.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateTeams = async (m) => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/update-teams', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({secret:PASS, match_id:m.id, team_a:m.team_a, team_b:m.team_b, team_a_flag:m.team_a_flag, team_b_flag:m.team_b_flag}),
+      });
+      const json = await res.json();
+      if (!res.ok) { showMsg(`❌ ${json.error}`,'error'); } else { showMsg('✅ Equipos actualizados'); }
+      setEditTeams(null); load();
+    } catch(e) {
+      showMsg(`❌ Error: ${e.message}`,'error');
     } finally {
       setSaving(false);
     }
@@ -507,37 +526,89 @@ export default function AdminPage() {
                 <div key={phase} style={{marginBottom:'20px'}}>
                   <div style={{fontSize:'12px',fontWeight:600,color:'#F5C518',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'8px',paddingBottom:'6px',borderBottom:'1px solid rgba(245,197,24,0.15)'}}>{phaseLabels[phase]}</div>
                   <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
-                    {pm.map(m=>(
-                      <div key={m.id} style={{background:'#1E2535',border:`1px solid ${m.status==='finished'?'rgba(34,197,94,0.2)':'rgba(255,255,255,0.07)'}`,borderRadius:'8px',padding:'10px 14px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
-                        <div style={{flex:1,minWidth:'160px'}}>
-                          <span style={{fontSize:'13px',fontWeight:500}}>{m.team_a} vs {m.team_b}</span>
-                          <div style={{fontSize:'11px',color:'#8899BB',marginTop:'2px'}}>
-                            {new Date(m.scheduled_at).toLocaleDateString('es-EC',{day:'numeric',month:'short',timeZone:'America/Guayaquil'})} · {new Date(m.scheduled_at).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',timeZone:'America/Guayaquil',hour12:true})}
+                    {pm.map(m=>{
+                      const isTBD = m.team_a?.startsWith('TBD') || m.team_b?.startsWith('TBD');
+                      const isEditingTeams = editTeams?.id===m.id;
+                      return (
+                        <div key={m.id} style={{background:'#1E2535',border:`1px solid ${m.status==='finished'?'rgba(34,197,94,0.2)':isTBD?'rgba(251,191,36,0.25)':'rgba(255,255,255,0.07)'}`,borderRadius:'8px',padding:'10px 14px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
+                          <div style={{flex:1,minWidth:'160px'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap'}}>
+                              {m.team_a_flag&&<img src={m.team_a_flag} style={{height:'14px',borderRadius:'2px'}} />}
+                              <span style={{fontSize:'13px',fontWeight:500,color:isTBD?'#FBB724':'#F0F4FF'}}>{m.team_a}</span>
+                              <span style={{fontSize:'11px',color:'#8899BB'}}>vs</span>
+                              {m.team_b_flag&&<img src={m.team_b_flag} style={{height:'14px',borderRadius:'2px'}} />}
+                              <span style={{fontSize:'13px',fontWeight:500,color:isTBD?'#FBB724':'#F0F4FF'}}>{m.team_b}</span>
+                              {isTBD&&<span style={{fontSize:'9px',background:'rgba(251,191,36,0.15)',color:'#FBB724',border:'1px solid rgba(251,191,36,0.3)',padding:'1px 5px',borderRadius:'3px',fontWeight:600}}>POR DEFINIR</span>}
+                            </div>
+                            <div style={{fontSize:'11px',color:'#8899BB',marginTop:'2px'}}>
+                              {new Date(m.scheduled_at).toLocaleDateString('es-EC',{day:'numeric',month:'short',timeZone:'America/Guayaquil'})} · {new Date(m.scheduled_at).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',timeZone:'America/Guayaquil',hour12:true})}
+                            </div>
                           </div>
+                          <div style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap'}}>
+                            {m.status!=='finished'&&!isEditingTeams&&(
+                              <button onClick={()=>{setEditTeams({...m});setEditResult(null);}} style={{background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.25)',color:'#FBB724',fontSize:'11px',fontWeight:600,padding:'4px 10px',borderRadius:'5px',cursor:'pointer'}}>
+                                ✏️ Equipos
+                              </button>
+                            )}
+                            {m.status==='finished'?(
+                              <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                                <span style={{fontWeight:800,fontSize:'18px',color:'#22C55E'}}>{m.score_a} - {m.score_b}</span>
+                                <span style={{fontSize:'10px',color:'#22C55E',background:'rgba(34,197,94,0.1)',padding:'2px 6px',borderRadius:'4px'}}>✓ Final</span>
+                                <button onClick={()=>setEditResult({...m})} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'11px',padding:'3px 8px',borderRadius:'4px',cursor:'pointer'}}>Editar</button>
+                              </div>
+                            ):editResult?.id===m.id?(
+                              <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                                <input type="number" min="0" max="20" value={editResult.score_a??''} onChange={e=>setEditResult(p=>({...p,score_a:e.target.value}))}
+                                  style={{width:'44px',height:'36px',background:'#0A0E1A',border:'1px solid #F5C518',borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center',outline:'none'}} />
+                                <span style={{color:'#8899BB',fontWeight:700}}>-</span>
+                                <input type="number" min="0" max="20" value={editResult.score_b??''} onChange={e=>setEditResult(p=>({...p,score_b:e.target.value}))}
+                                  style={{width:'44px',height:'36px',background:'#0A0E1A',border:'1px solid #F5C518',borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center',outline:'none'}} />
+                                <button onClick={()=>updateResult(editResult)} disabled={saving} style={{background:saving?'#888':'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'12px',border:'none',padding:'6px 12px',borderRadius:'6px',cursor:saving?'wait':'pointer'}}>{saving?'Guardando...':'Guardar'}</button>
+                                <button onClick={()=>setEditResult(null)} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'12px',padding:'6px 10px',borderRadius:'6px',cursor:'pointer'}}>✕</button>
+                              </div>
+                            ):!isEditingTeams?(
+                              <button onClick={()=>{setEditResult({...m,score_a:'',score_b:''});setEditTeams(null);}} style={{background:'rgba(245,197,24,0.1)',border:'1px solid rgba(245,197,24,0.2)',color:'#F5C518',fontWeight:600,fontSize:'12px',padding:'6px 14px',borderRadius:'6px',cursor:'pointer'}}>
+                                + Cargar resultado
+                              </button>
+                            ):null}
+                          </div>
+                          {isEditingTeams&&(
+                            <div style={{width:'100%',marginTop:'10px',paddingTop:'10px',borderTop:'1px solid rgba(255,255,255,0.07)'}}>
+                              <div style={{fontSize:'11px',fontWeight:600,color:'#FBB724',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'8px'}}>Editar equipos</div>
+                              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',marginBottom:'8px'}}>
+                                <div>
+                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>Equipo A (local)</label>
+                                  <input value={editTeams.team_a||''} onChange={e=>setEditTeams(p=>({...p,team_a:e.target.value}))} placeholder="Ej: Argentina"
+                                    style={{width:'100%',background:'#0A0E1A',border:'1px solid #FBB724',borderRadius:'5px',padding:'6px 8px',color:'#F0F4FF',fontSize:'13px',outline:'none',boxSizing:'border-box'}} />
+                                </div>
+                                <div>
+                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>Equipo B (visitante)</label>
+                                  <input value={editTeams.team_b||''} onChange={e=>setEditTeams(p=>({...p,team_b:e.target.value}))} placeholder="Ej: Francia"
+                                    style={{width:'100%',background:'#0A0E1A',border:'1px solid #FBB724',borderRadius:'5px',padding:'6px 8px',color:'#F0F4FF',fontSize:'13px',outline:'none',boxSizing:'border-box'}} />
+                                </div>
+                                <div>
+                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>URL bandera A (flagcdn.com/w40/XX.png)</label>
+                                  <input value={editTeams.team_a_flag||''} onChange={e=>setEditTeams(p=>({...p,team_a_flag:e.target.value}))} placeholder="https://flagcdn.com/w40/ar.png"
+                                    style={{width:'100%',background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'5px',padding:'6px 8px',color:'#F0F4FF',fontSize:'12px',outline:'none',boxSizing:'border-box'}} />
+                                </div>
+                                <div>
+                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>URL bandera B (flagcdn.com/w40/XX.png)</label>
+                                  <input value={editTeams.team_b_flag||''} onChange={e=>setEditTeams(p=>({...p,team_b_flag:e.target.value}))} placeholder="https://flagcdn.com/w40/fr.png"
+                                    style={{width:'100%',background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'5px',padding:'6px 8px',color:'#F0F4FF',fontSize:'12px',outline:'none',boxSizing:'border-box'}} />
+                                </div>
+                              </div>
+                              <div style={{fontSize:'10px',color:'#8899BB',marginBottom:'8px'}}>
+                                💡 Códigos de 2 letras ISO: ar=Argentina, fr=Francia, br=Brasil, de=Alemania, es=España, pt=Portugal, ec=Ecuador, us=USA, mx=México, co=Colombia, uy=Uruguay, nl=Países Bajos, hr=Croacia, ma=Marruecos, sn=Senegal, jp=Japón, kr=Corea, au=Australia, eg=Egipto, ng=Nigeria, gh=Ghana, cm=Camerún
+                              </div>
+                              <div style={{display:'flex',gap:'8px'}}>
+                                <button onClick={()=>updateTeams(editTeams)} disabled={saving} style={{background:saving?'#888':'#FBB724',color:'#0A0E1A',fontWeight:700,fontSize:'12px',border:'none',padding:'7px 18px',borderRadius:'6px',cursor:saving?'wait':'pointer'}}>{saving?'Guardando...':'Guardar equipos'}</button>
+                                <button onClick={()=>setEditTeams(null)} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'12px',padding:'7px 12px',borderRadius:'6px',cursor:'pointer'}}>Cancelar</button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        {m.status==='finished'?(
-                          <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                            <span style={{fontWeight:800,fontSize:'18px',color:'#22C55E'}}>{m.score_a} - {m.score_b}</span>
-                            <span style={{fontSize:'10px',color:'#22C55E',background:'rgba(34,197,94,0.1)',padding:'2px 6px',borderRadius:'4px'}}>✓ Final</span>
-                            <button onClick={()=>setEditResult({...m})} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'11px',padding:'3px 8px',borderRadius:'4px',cursor:'pointer'}}>Editar</button>
-                          </div>
-                        ):editResult?.id===m.id?(
-                          <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                            <input type="number" min="0" max="20" value={editResult.score_a??''} onChange={e=>setEditResult(p=>({...p,score_a:e.target.value}))}
-                              style={{width:'44px',height:'36px',background:'#0A0E1A',border:'1px solid #F5C518',borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center',outline:'none'}} />
-                            <span style={{color:'#8899BB',fontWeight:700}}>-</span>
-                            <input type="number" min="0" max="20" value={editResult.score_b??''} onChange={e=>setEditResult(p=>({...p,score_b:e.target.value}))}
-                              style={{width:'44px',height:'36px',background:'#0A0E1A',border:'1px solid #F5C518',borderRadius:'6px',color:'#F0F4FF',fontWeight:700,fontSize:'16px',textAlign:'center',outline:'none'}} />
-                            <button onClick={()=>updateResult(editResult)} disabled={saving} style={{background:saving?'#888':'#F5C518',color:'#0A0E1A',fontWeight:700,fontSize:'12px',border:'none',padding:'6px 12px',borderRadius:'6px',cursor:saving?'wait':'pointer'}}>{saving?'Guardando...':'Guardar'}</button>
-                            <button onClick={()=>setEditResult(null)} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'12px',padding:'6px 10px',borderRadius:'6px',cursor:'pointer'}}>✕</button>
-                          </div>
-                        ):(
-                          <button onClick={()=>setEditResult({...m,score_a:'',score_b:''})} style={{background:'rgba(245,197,24,0.1)',border:'1px solid rgba(245,197,24,0.2)',color:'#F5C518',fontWeight:600,fontSize:'12px',padding:'6px 14px',borderRadius:'6px',cursor:'pointer'}}>
-                            + Cargar resultado
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
