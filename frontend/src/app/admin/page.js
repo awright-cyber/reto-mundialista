@@ -2,6 +2,16 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
+const FLAG_CODES = {
+  MEX:'mx',RSA:'za',KOR:'kr',CZE:'cz',CAN:'ca',BIH:'ba',QAT:'qa',SUI:'ch',
+  BRA:'br',MAR:'ma',HAI:'ht',SCO:'gb-sct',USA:'us',PAR:'py',AUS:'au',TUR:'tr',
+  GER:'de',CUW:'cw',CIV:'ci',ECU:'ec',NED:'nl',JPN:'jp',SWE:'se',TUN:'tn',
+  BEL:'be',EGY:'eg',IRN:'ir',NZL:'nz',ESP:'es',CPV:'cv',KSA:'sa',URU:'uy',
+  FRA:'fr',SEN:'sn',IRQ:'iq',NOR:'no',ARG:'ar',ALG:'dz',AUT:'at',JOR:'jo',
+  POR:'pt',COD:'cd',UZB:'uz',COL:'co',ENG:'gb-eng',CRO:'hr',GHA:'gh',PAN:'pa'
+};
+const flagUrl = (code) => { const iso=FLAG_CODES[code]; return iso?`https://flagcdn.com/24x18/${iso}.png`:null; };
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -133,7 +143,7 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/update-teams', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({secret:PASS, match_id:m.id, team_a:m.team_a, team_b:m.team_b, team_a_flag:m.team_a_flag, team_b_flag:m.team_b_flag}),
+        body: JSON.stringify({secret:PASS, match_id:m.id, team_a:m.team_a, team_b:m.team_b, team_a_code:m.team_a_code, team_b_code:m.team_b_code}),
       });
       const json = await res.json();
       if (!res.ok) { showMsg(`❌ ${json.error}`,'error'); } else { showMsg('✅ Equipos actualizados'); }
@@ -533,10 +543,10 @@ export default function AdminPage() {
                         <div key={m.id} style={{background:'#1E2535',border:`1px solid ${m.status==='finished'?'rgba(34,197,94,0.2)':isTBD?'rgba(251,191,36,0.25)':'rgba(255,255,255,0.07)'}`,borderRadius:'8px',padding:'10px 14px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
                           <div style={{flex:1,minWidth:'160px'}}>
                             <div style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap'}}>
-                              {m.team_a_flag&&<img src={m.team_a_flag} style={{height:'14px',borderRadius:'2px'}} />}
+                              {flagUrl(m.team_a_code)&&<img src={flagUrl(m.team_a_code)} width="24" height="18" style={{borderRadius:'2px',objectFit:'cover'}} />}
                               <span style={{fontSize:'13px',fontWeight:500,color:isTBD?'#FBB724':'#F0F4FF'}}>{m.team_a}</span>
                               <span style={{fontSize:'11px',color:'#8899BB'}}>vs</span>
-                              {m.team_b_flag&&<img src={m.team_b_flag} style={{height:'14px',borderRadius:'2px'}} />}
+                              {flagUrl(m.team_b_code)&&<img src={flagUrl(m.team_b_code)} width="24" height="18" style={{borderRadius:'2px',objectFit:'cover'}} />}
                               <span style={{fontSize:'13px',fontWeight:500,color:isTBD?'#FBB724':'#F0F4FF'}}>{m.team_b}</span>
                               {isTBD&&<span style={{fontSize:'9px',background:'rgba(251,191,36,0.15)',color:'#FBB724',border:'1px solid rgba(251,191,36,0.3)',padding:'1px 5px',borderRadius:'3px',fontWeight:600}}>POR DEFINIR</span>}
                             </div>
@@ -577,28 +587,34 @@ export default function AdminPage() {
                               <div style={{fontSize:'11px',fontWeight:600,color:'#FBB724',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'8px'}}>Editar equipos</div>
                               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',marginBottom:'8px'}}>
                                 <div>
-                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>Equipo A (local)</label>
+                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>Nombre Equipo A</label>
                                   <input value={editTeams.team_a||''} onChange={e=>setEditTeams(p=>({...p,team_a:e.target.value}))} placeholder="Ej: Argentina"
                                     style={{width:'100%',background:'#0A0E1A',border:'1px solid #FBB724',borderRadius:'5px',padding:'6px 8px',color:'#F0F4FF',fontSize:'13px',outline:'none',boxSizing:'border-box'}} />
                                 </div>
                                 <div>
-                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>Equipo B (visitante)</label>
+                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>Nombre Equipo B</label>
                                   <input value={editTeams.team_b||''} onChange={e=>setEditTeams(p=>({...p,team_b:e.target.value}))} placeholder="Ej: Francia"
                                     style={{width:'100%',background:'#0A0E1A',border:'1px solid #FBB724',borderRadius:'5px',padding:'6px 8px',color:'#F0F4FF',fontSize:'13px',outline:'none',boxSizing:'border-box'}} />
                                 </div>
                                 <div>
-                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>URL bandera A (flagcdn.com/w40/XX.png)</label>
-                                  <input value={editTeams.team_a_flag||''} onChange={e=>setEditTeams(p=>({...p,team_a_flag:e.target.value}))} placeholder="https://flagcdn.com/w40/ar.png"
-                                    style={{width:'100%',background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'5px',padding:'6px 8px',color:'#F0F4FF',fontSize:'12px',outline:'none',boxSizing:'border-box'}} />
+                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>Código bandera A (3 letras)</label>
+                                  <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
+                                    <input value={editTeams.team_a_code||''} onChange={e=>setEditTeams(p=>({...p,team_a_code:e.target.value.toUpperCase()}))} placeholder="ARG"
+                                      style={{width:'70px',background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'5px',padding:'6px 8px',color:'#F0F4FF',fontSize:'13px',fontWeight:700,textTransform:'uppercase',outline:'none',boxSizing:'border-box'}} />
+                                    {flagUrl(editTeams.team_a_code)&&<img src={flagUrl(editTeams.team_a_code)} width="24" height="18" style={{borderRadius:'2px'}} />}
+                                  </div>
                                 </div>
                                 <div>
-                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>URL bandera B (flagcdn.com/w40/XX.png)</label>
-                                  <input value={editTeams.team_b_flag||''} onChange={e=>setEditTeams(p=>({...p,team_b_flag:e.target.value}))} placeholder="https://flagcdn.com/w40/fr.png"
-                                    style={{width:'100%',background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'5px',padding:'6px 8px',color:'#F0F4FF',fontSize:'12px',outline:'none',boxSizing:'border-box'}} />
+                                  <label style={{fontSize:'10px',color:'#8899BB',display:'block',marginBottom:'3px'}}>Código bandera B (3 letras)</label>
+                                  <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
+                                    <input value={editTeams.team_b_code||''} onChange={e=>setEditTeams(p=>({...p,team_b_code:e.target.value.toUpperCase()}))} placeholder="FRA"
+                                      style={{width:'70px',background:'#0A0E1A',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'5px',padding:'6px 8px',color:'#F0F4FF',fontSize:'13px',fontWeight:700,textTransform:'uppercase',outline:'none',boxSizing:'border-box'}} />
+                                    {flagUrl(editTeams.team_b_code)&&<img src={flagUrl(editTeams.team_b_code)} width="24" height="18" style={{borderRadius:'2px'}} />}
+                                  </div>
                                 </div>
                               </div>
-                              <div style={{fontSize:'10px',color:'#8899BB',marginBottom:'8px'}}>
-                                💡 Códigos de 2 letras ISO: ar=Argentina, fr=Francia, br=Brasil, de=Alemania, es=España, pt=Portugal, ec=Ecuador, us=USA, mx=México, co=Colombia, uy=Uruguay, nl=Países Bajos, hr=Croacia, ma=Marruecos, sn=Senegal, jp=Japón, kr=Corea, au=Australia, eg=Egipto, ng=Nigeria, gh=Ghana, cm=Camerún
+                              <div style={{fontSize:'10px',color:'#8899BB',marginBottom:'8px',background:'rgba(255,255,255,0.03)',padding:'8px',borderRadius:'6px',lineHeight:'1.6'}}>
+                                💡 Códigos: ARG · BRA · FRA · ENG · ESP · POR · GER · NED · BEL · ITA · CRO · SUI · NOR · SWE · AUT · ECU · MEX · USA · COL · URU · CAN · AUS · JPN · KOR · MAR · SEN · GHA · EGY · ALG · COD · RSA · CPV · BIH · PAR · CIV
                               </div>
                               <div style={{display:'flex',gap:'8px'}}>
                                 <button onClick={()=>updateTeams(editTeams)} disabled={saving} style={{background:saving?'#888':'#FBB724',color:'#0A0E1A',fontWeight:700,fontSize:'12px',border:'none',padding:'7px 18px',borderRadius:'6px',cursor:saving?'wait':'pointer'}}>{saving?'Guardando...':'Guardar equipos'}</button>

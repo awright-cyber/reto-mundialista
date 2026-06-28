@@ -11,7 +11,7 @@ const supabase = createClient(
 
 export async function POST(request) {
   try {
-    const { secret, match_id, team_a, team_b, team_a_flag, team_b_flag } = await request.json();
+    const { secret, match_id, team_a, team_b, team_a_code, team_b_code } = await request.json();
 
     if (secret !== process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -25,8 +25,8 @@ export async function POST(request) {
       .update({
         team_a: team_a.trim(),
         team_b: team_b.trim(),
-        team_a_flag: team_a_flag?.trim() || null,
-        team_b_flag: team_b_flag?.trim() || null,
+        team_a_code: team_a_code?.trim().toUpperCase() || null,
+        team_b_code: team_b_code?.trim().toUpperCase() || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', match_id);
