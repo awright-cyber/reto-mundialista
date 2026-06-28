@@ -85,7 +85,7 @@ export default function AdminPage() {
     const [{data:cd},{data:ud},{data:md},{count:uc},{count:pc},{count:fc},{data:pd}] = await Promise.all([
       supabase.from('app_content').select('key,value'),
       supabase.from('users').select('id,full_name,email,city,cedula,created_at,total_points,global_rank').order('created_at',{ascending:false}).limit(200),
-      supabase.from('matches').select('id,match_number,phase,group_name,team_a,team_b,team_a_flag,team_b_flag,score_a,score_b,status,scheduled_at').order('match_number',{ascending:true}),
+      supabase.from('matches').select('id,match_number,phase,group_name,team_a,team_b,team_a_code,team_b_code,score_a,score_b,status,went_to_penalties,winner_code,scheduled_at').order('match_number',{ascending:true}),
       supabase.from('users').select('id',{count:'exact'}),
       supabase.from('predictions').select('id',{count:'exact'}),
       supabase.from('matches').select('id',{count:'exact'}).eq('status','finished'),
@@ -125,13 +125,14 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/save-result', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({secret:PASS, match_id:m.id, score_a:m.score_a, score_b:m.score_b}),
+        body: JSON.stringify({secret:PASS, match_id:m.id, score_a:m.score_a, score_b:m.score_b, went_to_penalties:m.went_to_penalties||false, winner_side:m.winner_side||null}),
       });
       const json = await res.json();
-      if (!res.ok) { showMsg(`❌ ${json.error}`); setEditResult(null); load(); return; }
-      setEditResult(null); load(); showMsg('✅ Resultado guardado y puntos calculados');
+      if (!res.ok) { showMsg(`❌ ${json.error}`,'error'); return; }
+      const extra = json.propagated ? ` · Llave actualizada → partido ${json.nextMatch}` : '';
+      setEditResult(null); load(); showMsg(`✅ Resultado guardado${extra}`);
     } catch(e) {
-      showMsg(`❌ Error: ${e.message}`);
+      showMsg(`❌ Error: ${e.message}`,'error');
     } finally {
       setSaving(false);
     }
@@ -564,7 +565,7 @@ export default function AdminPage() {
                               <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
                                 <span style={{fontWeight:800,fontSize:'18px',color:'#22C55E'}}>{m.score_a} - {m.score_b}</span>
                                 <span style={{fontSize:'10px',color:'#22C55E',background:'rgba(34,197,94,0.1)',padding:'2px 6px',borderRadius:'4px'}}>✓ Final</span>
-                                <button onClick={()=>setEditResult({...m})} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'11px',padding:'3px 8px',borderRadius:'4px',cursor:'pointer'}}>Editar</button>
+                                <button onClick={()=>setEditResult({...m,winner_side:m.winner_code===m.team_a_code?'a':m.winner_code===m.team_b_code?'b':null})} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'11px',padding:'3px 8px',borderRadius:'4px',cursor:'pointer'}}>Editar</button>
                               </div>
                             ):editResult?.id===m.id?(
                               <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
@@ -577,11 +578,42 @@ export default function AdminPage() {
                                 <button onClick={()=>setEditResult(null)} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'#8899BB',fontSize:'12px',padding:'6px 10px',borderRadius:'6px',cursor:'pointer'}}>✕</button>
                               </div>
                             ):!isEditingTeams?(
-                              <button onClick={()=>{setEditResult({...m,score_a:'',score_b:''});setEditTeams(null);}} style={{background:'rgba(245,197,24,0.1)',border:'1px solid rgba(245,197,24,0.2)',color:'#F5C518',fontWeight:600,fontSize:'12px',padding:'6px 14px',borderRadius:'6px',cursor:'pointer'}}>
+                              <button onClick={()=>{setEditResult({...m,score_a:'',score_b:'',went_to_penalties:false,winner_side:null});setEditTeams(null);}} style={{background:'rgba(245,197,24,0.1)',border:'1px solid rgba(245,197,24,0.2)',color:'#F5C518',fontWeight:600,fontSize:'12px',padding:'6px 14px',borderRadius:'6px',cursor:'pointer'}}>
                                 + Cargar resultado
                               </button>
                             ):null}
                           </div>
+                          {editResult?.id===m.id&&m.phase!=='grupos'&&(()=>{
+                            const sa=editResult.score_a!==''?parseInt(editResult.score_a):NaN;
+                            const sb=editResult.score_b!==''?parseInt(editResult.score_b):NaN;
+                            const tied=!isNaN(sa)&&!isNaN(sb)&&sa===sb;
+                            const needWinner=tied||editResult.went_to_penalties;
+                            return (
+                              <div style={{width:'100%',marginTop:'8px',paddingTop:'8px',borderTop:'1px solid rgba(255,255,255,0.07)',display:'flex',alignItems:'center',gap:'12px',flexWrap:'wrap'}}>
+                                <label style={{display:'flex',alignItems:'center',gap:'6px',cursor:'pointer',fontSize:'12px',color:'#8899BB'}}>
+                                  <input type="checkbox" checked={!!editResult.went_to_penalties} onChange={e=>setEditResult(p=>({...p,went_to_penalties:e.target.checked,winner_side:null}))} style={{accentColor:'#F5C518',width:'14px',height:'14px'}} />
+                                  ¿Fue a penales?
+                                </label>
+                                {needWinner&&(
+                                  <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                                    <span style={{fontSize:'11px',fontWeight:600,color:'#FBB724'}}>¿Quién pasó?</span>
+                                    {[['a',m.team_a],['b',m.team_b]].map(([side,name])=>(
+                                      <button key={side} onClick={()=>setEditResult(p=>({...p,winner_side:side}))}
+                                        style={{padding:'3px 10px',borderRadius:'5px',fontSize:'12px',fontWeight:600,cursor:'pointer',border:'1px solid',
+                                          background:editResult.winner_side===side?'rgba(34,197,94,0.15)':'rgba(255,255,255,0.04)',
+                                          borderColor:editResult.winner_side===side?'#22C55E':'rgba(255,255,255,0.12)',
+                                          color:editResult.winner_side===side?'#22C55E':'#8899BB'}}>
+                                        {name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                {needWinner&&!editResult.winner_side&&(
+                                  <span style={{fontSize:'11px',color:'#FBB724'}}>⚠️ Selecciona el ganador antes de guardar</span>
+                                )}
+                              </div>
+                            );
+                          })()}
                           {isEditingTeams&&(
                             <div style={{width:'100%',marginTop:'10px',paddingTop:'10px',borderTop:'1px solid rgba(255,255,255,0.07)'}}>
                               <div style={{fontSize:'11px',fontWeight:600,color:'#FBB724',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'8px'}}>Editar equipos</div>
